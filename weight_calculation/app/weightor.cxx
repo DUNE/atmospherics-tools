@@ -46,7 +46,7 @@ int main(int argc, char const *argv[])
         .help("Target exposure in kton.yr");
     
     parser.add_argument("-m", "--mass")
-        .default_value(2.5f) //TODO: Pick the exact default value that matches the production
+        .default_value(1.71958f) //Default value for 1x2x6 production
         .scan<'g', float>()
         .help("Detector mass in kton USED FOR THE SIMULATION.");
 
