@@ -251,9 +251,8 @@ class Anatree:
                 arr[c] = flat
             
         self.pfp = pl.from_pandas(pd.DataFrame(arr))
-
         temp_pfp = self.pfp
-        temp_pfp = temp_pfp.join(self.pfp.groupby(['subrun','event']).agg(
+        temp_pfp = temp_pfp.join(self.pfp.group_by(['subrun','event']).agg(
             pl.col('pfp_selfID').filter( # Get ID of neutrino
                 pl.col('pfp_isPrimary')==1
             ).first().alias('nuID')
