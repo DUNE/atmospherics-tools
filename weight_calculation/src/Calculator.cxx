@@ -1,4 +1,5 @@
 #include "Calculator.h"
+#include "progressbar.hpp"
 
 template<typename T>
 Calculator<T>::Calculator(const FluxManager& mgr, Reader<T>& rdr, Writer& wrt, float exposure_scaling)
@@ -25,7 +26,12 @@ template<typename T>
 void Calculator<T>::Process(){
     double POT = _rdr.POT();
     std::cout << "Got POT of: " << POT << std::endl;
+    int nentries = _rdr.GetNentries();
+    progressbar bar(nentries);
+    bar.set_todo_char(" ");
+    bar.set_done_char("█");
     while(_rdr.GetEntry()){
+        bar.update();
         Data<double> data = FetchData();
         double Enu = data.ev;
         double costh = data.NuMomY/sqrt(pow(data.NuMomX, 2) + pow(data.NuMomY, 2) + pow(data.NuMomZ, 2));

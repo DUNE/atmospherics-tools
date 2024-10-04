@@ -1,114 +1,120 @@
 #include "FluxManager.h"
 #include "Reader.h"
-#include "Writer.h"
+#include "SRWriter.h"
 #include "Calculator.h"
-
-#define CHEATING 1
+#include "progressbar.hpp"
+#include <argparse/argparse.hpp>
 
 enum Sel{
     SelNuE,
-    SelNuMu
+    SelNuMu,
+    SelNC
 };
 
 int main(int argc, char const *argv[])
 {
-    std::map<Flavour, std::string> fluxes = {
-        {Flavour::NuE, "/home/pgranger/atmospherics/honda/honda_2d_homestake_2015_nue.root"},
-        {Flavour::NuMu, "/home/pgranger/atmospherics/honda/honda_2d_homestake_2015_numu.root"},
-        {Flavour::NuEBar, "/home/pgranger/atmospherics/honda/honda_2d_homestake_2015_nuebar.root"},
-        {Flavour::NuMuBar, "/home/pgranger/atmospherics/honda/honda_2d_homestake_2015_numubar.root"},
-    };
+    argparse::ArgumentParser parser("weightor");
 
-    std::string ifilename("/home/pgranger/atmospherics/merged_caf_systs_new_hd.root");
-    std::string ofilename("/home/pgranger/atmospherics/debug/MaCh3_DUNE/output.root");
-    std::string ofolder("/home/pgranger/atmospherics/debug/MaCh3_DUNE/");
+    parser.add_argument("-i", "--input")
+        .required()
+        .help("Input file to process. Must have been produced by weightor before.");
 
-    //TODO: NEED TO CHECK THE EXACT MASS
-    float det_mass = 2.5; //kton
-    int year = 3600*24*365;
-    float target_exposure = 400; //kton.yr
+    parser.add_argument("-o", "--output")
+        .required()
+        .help("Output file basename (no extension).");
 
-    float exposure_scaling = target_exposure*year/det_mass;
+    parser.add_argument("--cvn_numu")
+        .default_value(0.56f)
+        .help("CVN threshold to select an event as numu. (applies first)");
 
-    FluxManager manager(fluxes);
-    Reader<float> reader(ifilename);
+    parser.add_argument("--cvn_nue")
+        .default_value(0.55f)
+        .help("CVN threshold to select an event as nue. (applies second)");
 
-    Writer writer(ofilename);
+    try {
+        parser.parse_args(argc, argv);
+    }
+    catch (const std::exception& err) {
+        std::cerr << err.what() << std::endl;
+        std::cerr << parser;
+        return 1;
+    }
 
-    Calculator<float> calc(manager, reader, writer, exposure_scaling);
-    calc.Process();
-    writer.Write();
-    writer.WriteFile();
+    std::string ifilename(parser.get<std::string>("-i"));
+    std::string ofilename(parser.get<std::string>("-o"));
 
-    // TTree *tree = writer.GetTree();
-    Reader<double> new_reader(ofilename);
+    float cvn_numu = parser.get<float>("--cvn_numu");
+    float cvn_nue = parser.get<float>("--cvn_nue");
 
-    std::map<std::tuple<Flavour, Flavour, Sel>, Writer*> channels;
+    std::cout << "Opening file: " << ifilename << std::endl;
+    TFile *ifile = TFile::Open(ifilename.c_str(), "READ");
+    if(ifile == nullptr){
+        std::cout << "Could not open file: " << ifilename << std::endl;
+        abort();
+    }
+
+    TTree* caf_tree = nullptr;
+    ifile->GetObject("cafTree", caf_tree);
+    if(caf_tree == nullptr){
+        std::cout << "No tree named weights in the input file " << ifilename << std::endl;
+        abort();
+    }
+
+    TTree* weights_tree = nullptr;
+    ifile->GetObject("weights", weights_tree);
+    if(weights_tree == nullptr){
+        std::cout << "No tree named weights in the input file " << ifilename << std::endl;
+        abort();
+    }
+    double nuE_flux, nuMu_flux, xsec_w;
+    weights_tree->SetBranchAddress("flux_nue", &nuE_flux);
+    weights_tree->SetBranchAddress("flux_numu", &nuMu_flux);
+    weights_tree->SetBranchAddress("xsec", &xsec_w);
+
+    caf::StandardRecord *sr = nullptr;
+    caf_tree->SetBranchAddress("rec", &sr);
+    
+    std::map<std::tuple<Flavour, Flavour, Sel>, SRWriter*> channels;
     
     for(Flavour ifl : {Flavour::NuE, Flavour::NuMu, Flavour::NuEBar, Flavour::NuMuBar}){
         for(Flavour ofl : {Flavour::NuE, Flavour::NuMu, Flavour::NuTau, Flavour::NuEBar, Flavour::NuMuBar, Flavour::NuTauBar}){
             if(ifl*ofl < 0){//nu -> nubar osc impossible
                 continue;
             }
-            for(Sel sel : {Sel::SelNuE, Sel::SelNuMu}){
+            for(Sel sel : {Sel::SelNuE, Sel::SelNuMu, Sel::SelNC}){
                 std::string sel_str;
-                if(sel == Sel::SelNuE){
+                switch (sel)
+                {
+                case Sel::SelNuE:
                     sel_str = "nueselec";
-                }
-                else{
+                    break;
+                case Sel::SelNuMu:
                     sel_str = "numuselec";
+                    break;
+                case Sel::SelNC:
+                    sel_str = "ncselec";
+                    break;
                 }
-                std::string fname = "hd_AV_" + flavours[ifl] + "_x_" + flavours[ofl] + "_" + sel_str + ".root";
-                Writer* ch_writer = new Writer(fname);
+
+                std::string fname = ofilename + flavours[ifl] + "_x_" + flavours[ofl] + "_" + sel_str + ".root";
+                SRWriter *ch_writer = new SRWriter(fname, sr);
                 channels.insert({{ifl, ofl, sel}, ch_writer});
             } 
         }
     }
 
-    while(new_reader.GetEntry()){
-        Data<double> data = new_reader.GetData();
-        Sel sel;
-        // std::cout << data.ev  << std::endl;
+    uint nentries = caf_tree->GetEntries();
 
-        #ifdef CHEATING
+    progressbar bar(nentries);
+    bar.set_todo_char(" ");
+    bar.set_done_char("█");
 
-        if(abs(data.nuPDG) == 12){
-            sel = Sel::SelNuE;
-            if(data.erec_nue <= 0.1){
-                continue;
-            }
-        }
-        else if(abs(data.nuPDG) == 14){
-            sel = Sel::SelNuMu;
-            if(data.erec <= 0.1){
-                continue;
-            }
-        }
-        else{
-            continue;
-        }
+    for(uint i = 0; i < nentries; i++){
+        caf_tree->GetEntry(i);
+        weights_tree->GetEntry(i);
+        bar.update();
 
-        #else
-
-        if(data.cvnnue > 0.8){
-            sel = Sel::SelNuE;
-            if(data.erec_nue <= 0.1){
-                continue;
-            }
-        }
-        else if(data.cvnnumu > 0.8){
-            sel = Sel::SelNuMu;
-            if(data.erec <= 0.1){
-                continue;
-            }
-        }
-        else{
-            continue;
-        }
-
-        #endif
-
-        Flavour ofl = Flavour(data.nuPDG);
+        Flavour ofl = Flavour(sr->mc.nu[0].pdg);
         std::vector<Flavour> ifls;
 
         if(ofl < 0){
@@ -118,23 +124,33 @@ int main(int argc, char const *argv[])
             ifls = {Flavour::NuE, Flavour::NuMu};
         }
 
-        Writer* channel_writer = channels[{ifls[0], ofl, sel}];
-        data.weight = data.nue_w;
-        channel_writer->Fill(data);
+        Sel sel = Sel::SelNC; // By defaukt an event is NC if it does not pass any cvn threshold
+
+        if(sr->common.ixn.pandora.size() != 1){
+            continue;
+        }
+
+        if(sr->common.ixn.pandora[0].nuhyp.cvn.numu > cvn_numu){
+            sel = Sel::SelNuMu;
+        }
+        else if(sr->common.ixn.pandora[0].nuhyp.cvn.nue > cvn_nue){
+            sel = Sel::SelNuE;
+        }
+
+        SRWriter* channel_writer = channels[{ifls[0], ofl, sel}];
+        sr->mc.nu[0].genweight = xsec_w*nuE_flux;
+        channel_writer->Fill();
 
         channel_writer = channels[{ifls[1], ofl, sel}];
-        data.weight = data.numu_w;
-        channel_writer->Fill(data);
+        sr->mc.nu[0].genweight = xsec_w*nuMu_flux;
+        channel_writer->Fill();
     }
 
+    std::cout << std::endl;
+
     for(auto channel : channels){
-        std::cout << channel.second->_file->GetList()->GetEntries() << std::endl;
-        if(channel.second->_file->GetList()->GetEntries() != 1){
-            std::cout << "!= 1" << std::endl;
-            channel.second->_file->GetList()->Print();
-        }
-        channel.second->AddNorm();
-        channel.second->AddTree(reader.GetGlobalTree());
+        // channel.second->AddNorm();
+        // channel.second->AddTree(reader.GetGlobalTree());
         channel.second->Write();
         channel.second->WriteFile();
     }

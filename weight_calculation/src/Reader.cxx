@@ -61,7 +61,7 @@ void Reader<T>::Open(std::string fname, std::string subfolder)
     }
     _tree = tree;
 
-    //Loading the gloabl tree
+    //Loading the global tree
     
     TTree *global_tree;
     _file->GetObject(globtree_name.c_str(), global_tree);
@@ -185,6 +185,11 @@ template<typename T>
 TTree* Reader<T>::GetGenieTree(){
     return _genie_tree;
 }
+
+template<typename T>
+int Reader<T>::GetNentries(){
+    return _nentries;
+};
 
 template class Reader<float>;
 template class Reader<double>;

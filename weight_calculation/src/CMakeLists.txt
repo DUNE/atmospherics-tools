@@ -28,11 +28,11 @@ cmessage(STATUS "EIGEN: ${OscLib_LIBS}")
 # part of ERepSim.
 
 set(source_IO
-  Reader.cxx Flux.cxx FluxManager.cxx Calculator.cxx Writer.cxx DirWriter.cxx
+  Reader.cxx Flux.cxx FluxManager.cxx Calculator.cxx Writer.cxx DirWriter.cxx SRWriter.cxx
   )
 
 set(includes_IO
-  Reader.h Flux.h FluxManager.h Calculator.h Writer.h DirWriter.h
+  Reader.h Flux.h FluxManager.h Calculator.h Writer.h DirWriter.h SRWriter.h
   )
 
 ############################Weightor############################

@@ -41,4 +41,5 @@ public:
     TTree* GetGenieTree();
     TTree* GetTree();
     TFile* GetFile();
+    int GetNentries();
 };
