@@ -144,15 +144,6 @@ int main(int argc, char const *argv[]) {
   size_t NGENIEEvents = t_input_genie->GetEntries();
   printf("@@ Number of genie events = %ld\n", NGENIEEvents);
   
-  // Output file
-  std::cout << "@@ Creating output file: " << cliopts::output_filename << std::endl;
-  TFile *f_out = new TFile(cliopts::output_filename.c_str(), "RECREATE");
-  // - globalTree
-  TTree *t_output_globaltree = new TTree("globalTree", "globalTree");
-  // - cafTree
-  TTree *t_output_caftree = new TTree("cafTree", "cafTree");
-  t_output_caftree->Branch("rec", sr);
-
   // Proxy
   caf::StandardRecordProxy* srproxy = new caf::StandardRecordProxy(t_input_caftree, "rec");
 
@@ -161,7 +152,6 @@ int main(int argc, char const *argv[]) {
 
   // SRGlobal
   caf::SRGlobal srglobal = caf::SRGlobal();
-  t_output_globaltree->Branch("global", &srglobal);
   srglobal.wgts.params.clear();
   printf("@@ Writting Header\n");
   for(systtools::paramId_t pid : resp_helper.GetParameters()) {
@@ -183,7 +173,6 @@ int main(int argc, char const *argv[]) {
   for(const auto& sp:srglobal.wgts.params){
     printf("- (id, name, nshifts) = (%d, %s, %d)\n", sp.id, sp.name.c_str(), sp.nshifts);
   }
-  t_output_globaltree->Fill();
 
   // Loop over CAFTree
   for (size_t cafev_it = cliopts::NSkip; cafev_it < NToRead; ++cafev_it) {
@@ -195,19 +184,27 @@ int main(int argc, char const *argv[]) {
       auto& nu = srproxy->mc.nu[i_nu];
       auto mode = nu.mode;
       size_t genieIdx = nu.genieIdx;
+
+      if (genieIdx > t_input_genie->GetEntries()) {
+	std::cout << "Was expecting genieIdx < t_input_genie->GetEntries()" << std::endl;
+	std::cout << "genieIdx:" << genieIdx << std::endl;
+	std::cout << "t_input_genie->GetEntries():" << t_input_genie->GetEntries() << std::endl;
+	throw;
+      }
       t_input_genie->GetEntry(genieIdx);
       genie::EventRecord const &GenieGHep = *GenieNtpl->event;
 
       //DB: Force the assigned weight to be equal to exactly 1. so we renormalise the variation weight with respect to the flux weights
-      genie::EventRecord CopyGenieEventRecord(GenieGHep);
-      CopyGenieEventRecord.SetWeight(1.);
+      //genie::EventRecord CopyGenieEventRecord(GenieGHep);
+      //CopyGenieEventRecord.SetWeight(1.);
 
       // Evaluate reweights
-      systtools::event_unit_response_w_cv_t resp = resp_helper.GetEventVariationAndCVResponse(CopyGenieEventRecord);
+      systtools::event_unit_response_w_cv_t resp = resp_helper.GetEventVariationAndCVResponse(GenieGHep);
 
       for(const auto& v: resp){
         const systtools::paramId_t& pid = v.pid;
 	systtools::SystParamHeader const &hdr = resp_helper.GetHeader(pid);
+	if (hdr.isCorrection) continue;
 	
         const double& CVw = v.CV_response;
         const std::vector<double>& ws = v.responses;
@@ -221,11 +218,33 @@ int main(int argc, char const *argv[]) {
         }
 	std::cout << "}" << std::endl;
 
-	TGraph Graph(ws.size(),hdr.paramVariations.data(),ws.data());
-	TSpline3 Spline(Form("Event_%i_Syst_%s",int(cafev_it),hdr.prettyName.c_str()),&Graph);
+        size_t nPoints = ws.size();
 
-	std::cout << "\t" << Spline.GetTitle() << " : nKnots:" << Spline.GetNp() << std::endl;
+        if (nPoints != hdr.paramVariations.size()) {
+	  std::cout << "nPoints:" << nPoints << std::endl;
+	  std::cout << "hdr.paramVariations.size():" << hdr.paramVariations.size() << std::endl;
+          throw;
+        }
+        double* XVals = new double[nPoints];
+        double* YVals = new double[nPoints];
+        for (int iP=0;iP<nPoints;iP++) {
+          XVals[iP] = hdr.paramVariations.at(iP);
+          YVals[iP] = ws.at(iP);
+        }
+        for (int iP=0;iP<nPoints;iP++) {
+	  std::cout << "\t\tVals: " << iP << " , (X,Y) = (" << XVals[iP] << "," << YVals[iP] << ")" << std::endl;
+        }
+
+	TGraph Graph(nPoints,XVals,YVals);
+	TSpline3 Spline(Form("Event_%i_Syst_%s",int(cafev_it),hdr.prettyName.c_str()),&Graph);
 	
+	std::cout << "\t" << Spline.GetTitle() << " : nKnots:" << Spline.GetNp() << std::endl;
+	double x, y;
+	for (int iP=0;iP<Spline.GetNp();iP++) {
+	  Spline.GetKnot(iP,x,y);
+	  std::cout << "\t\tKnot: " << iP << " , (X,Y) = (" << x << "," << y << ")" << std::endl;
+	}
+
       } // END resp loop
 
       // UPDATE RECORD HERE
@@ -233,21 +252,11 @@ int main(int argc, char const *argv[]) {
 
     } // END nu loop
 
-    t_output_caftree->Fill();
+    //t_output_caftree->Fill();
   } // END caf event loop
 
   // Finalize output
 
-  std::cout << "@@ Finalizing output" << std::endl;
-  f_out->cd();
-  std::cout << "@@ - Writing globalTree" << std::endl;
-  t_output_globaltree->Write();
-  std::cout << "@@ - Writing cafTree" << std::endl;
-  t_output_caftree->Write();
-  std::cout << "@@ Closing output" << std::endl;
-  f_out->Close();
-
   std::cout << "@@ Closing input" << std::endl;
   f_input->Close();
-
 }

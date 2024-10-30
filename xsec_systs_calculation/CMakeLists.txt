@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD 17)
 project(ndnusyst VERSION 23.06 LANGUAGES CXX)
 include(FetchContent)
 
+set(CMAKE_CXX_FLAGS "-g")
 
 #Changes default install path to be a subdirectory of the build dir.
 #Can set build dir at configure time with -DCMAKE_INSTALL_PREFIX=/install/path
