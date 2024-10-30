@@ -221,14 +221,11 @@ int main(int argc, char const *argv[]) {
         }
 	std::cout << "}" << std::endl;
 
-	TGraph* Graph = new TGraph(ws.size(),hdr.paramVariations.data(),ws.data());
-	TSpline3* Spline = new TSpline3(Form("Event_%i_Syst_%s",int(cafev_it),hdr.prettyName.c_str()),Graph);
+	TGraph Graph(ws.size(),hdr.paramVariations.data(),ws.data());
+	TSpline3 Spline(Form("Event_%i_Syst_%s",int(cafev_it),hdr.prettyName.c_str()),&Graph);
 
-	std::cout << "\t" << Spline->GetTitle() << " : nKnots:" << Spline->GetNp() << std::endl;
+	std::cout << "\t" << Spline.GetTitle() << " : nKnots:" << Spline.GetNp() << std::endl;
 	
-	delete Graph;
-	delete Spline;
-
       } // END resp loop
 
       // UPDATE RECORD HERE
