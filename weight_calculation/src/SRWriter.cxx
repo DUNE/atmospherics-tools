@@ -31,3 +31,12 @@ void SRWriter::SetupTree(){
 void SRWriter::Fill(){
     _tree->Fill();
 }
+void SRWriter::SetGenieTree(TTree *tree){
+    genieTree = tree;
+    genieTree->SetDirectory(_file);
+    _additional_trees.push_back(genieTree);
+}
+
+TTree* SRWriter::GetGenieTree(){
+    return genieTree;
+}
