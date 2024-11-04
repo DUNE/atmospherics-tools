@@ -115,6 +115,7 @@ int main(int argc, char const *argv[])
     }
 
     uint nentries = caf_tree->GetEntries();
+    nentries = std::min(nentries, 100u);
     progressbar bar(nentries);
     bar.set_todo_char(" ");
     bar.set_done_char("█");
@@ -122,6 +123,7 @@ int main(int argc, char const *argv[])
     for(uint i = 0; i < nentries; i++){
         caf_tree->GetEntry(i);
         weights_tree->GetEntry(i);
+        genie_tree->GetEntry(i);
         bar.update();
 
         Flavour ofl = Flavour(sr->mc.nu[0].pdg);

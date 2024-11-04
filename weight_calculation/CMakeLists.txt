@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.14 FATAL_ERROR)
 
+include(FetchContent)
+
 #Use the compilers found in the path
 find_program(CMAKE_C_COMPILER NAMES $ENV{CC} gcc PATHS ENV PATH NO_DEFAULT_PATH)
 find_program(CMAKE_CXX_COMPILER NAMES $ENV{CXX} g++ PATHS ENV PATH NO_DEFAULT_PATH)
@@ -41,10 +43,27 @@ endif(ROOT_FOUND)
 
 find_package(duneanaobj 03.05.00 REQUIRED)
 
+if(DEFINED ENV{NuHepMCModules_ROOT})
+  include($ENV{NuHepMCModules_ROOT}/NuHepMCModules.cmake)
+else()
+  FetchContent_Declare(
+      CMakeModules
+      GIT_TAG stable
+      GIT_REPOSITORY https://github.com/NuHepMC/CMakeModules
+  )
+  FetchContent_MakeAvailable(CMakeModules)
+  include(${CMakeModules_SOURCE_DIR}/NuHepMCModules.cmake)
+endif()
+find_package(GENIE3 REQUIRED)
+if(NOT TARGET GENIE3::All)
+  message(FATAL_ERROR "Expected find_package(GENIE3 REQUIRED) call to set up target GENIE3::All.")
+endif()
+
+
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-include(FetchContent)
+
 FetchContent_Declare(
     argparse
     GIT_REPOSITORY https://github.com/p-ranav/argparse.git
