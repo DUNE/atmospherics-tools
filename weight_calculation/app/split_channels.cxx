@@ -115,7 +115,6 @@ int main(int argc, char const *argv[])
     }
 
     uint nentries = caf_tree->GetEntries();
-    nentries = std::min(nentries, 100u);
     progressbar bar(nentries);
     bar.set_todo_char(" ");
     bar.set_done_char("█");
