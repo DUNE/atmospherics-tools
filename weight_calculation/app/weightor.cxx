@@ -33,12 +33,14 @@ int main(int argc, char const *argv[])
     parser.add_argument("--numu")
         .default_value("honda_2d_homestake_2015_numu.root")
         .help("Specifies the name of the numu flux inside the flux directory");
-    //TODO: Create a distinction between the numu flux used to generate the sample, and the one people want to use to reweight.
-    // They are assumed to be the same for now!
 
     parser.add_argument("--numubar")
         .default_value("honda_2d_homestake_2015_numubar.root")
         .help("Specifies the name of the numubar flux inside the flux directory");
+
+    parser.add_argument("--ref_flux")
+        .default_value("/cvmfs/dune.osgstorage.org/pnfs/fnal.gov/usr/dune/persistent/stash/TaskForce_Flux/atmos/Honda_interp/honda_2d_homestake_2015_numu.root")
+        .help("Specifies the FULL PATH to the reference flux used to weight the sample at generation. THE DEFAULT VALUE SHOULD BE FINE.");
 
     parser.add_argument("-e", "--exposure")
         .default_value(400.f)
@@ -84,6 +86,7 @@ int main(int argc, char const *argv[])
     std::filesystem::path nuebar_file(parser.get<std::string>("--nuebar"));
     std::filesystem::path numu_file(parser.get<std::string>("--numu"));
     std::filesystem::path numubar_file(parser.get<std::string>("--numubar"));
+    std::filesystem::path ref_file(parser.get<std::string>("--ref_flux"));
 
     nue_file = fluxdir / nue_file;
     nuebar_file = fluxdir / nuebar_file;
@@ -95,6 +98,7 @@ int main(int argc, char const *argv[])
         {Flavour::NuMu, numu_file},
         {Flavour::NuEBar, nuebar_file},
         {Flavour::NuMuBar, numubar_file},
+        {Flavour::Reference, ref_file}
     };
 
     std::string ifilename(parser.get<std::string>("-i"));

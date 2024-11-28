@@ -43,9 +43,9 @@ void Calculator<T>::Process(){
         double nuE_flux = _mgr.GetFlux(nuE, Enu, costh, phi);
         double nuMu_flux = _mgr.GetFlux(nuMu, Enu, costh, phi);
 
-        //We assume here that the numu flux was used for the generation
+        double ref_flux = _mgr.GetFlux(Flavour::Reference, Enu, costh, phi);
         
-        double xsec_w = data.weight/nuMu_flux/POT*_exposure_scaling;
+        double xsec_w = data.weight/ref_flux/POT*_exposure_scaling;
         double nuE_w = nuE_flux;
         double nuMu_w = nuMu_flux;
 
