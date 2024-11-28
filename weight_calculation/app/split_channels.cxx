@@ -3,6 +3,7 @@
 #include "SRWriter.h"
 #include "Calculator.h"
 #include "progressbar.hpp"
+#include "Framework/Ntuple/NtpMCEventRecord.h"
 #include <argparse/argparse.hpp>
 
 enum Sel{
@@ -73,6 +74,9 @@ int main(int argc, char const *argv[])
         std::cout << "No tree named genieEvt in the input file " << ifilename << std::endl;
         abort();
     }
+
+    genie::NtpMCEventRecord *genie_record = new genie::NtpMCEventRecord();
+    genie_tree->SetBranchAddress("genie_record", &genie_record);
 
     double nuE_flux, nuMu_flux, xsec_w, osc_from_e_w, osc_from_mu_w;
     weights_tree->SetBranchAddress("flux_nue", &nuE_flux);
@@ -161,6 +165,8 @@ int main(int argc, char const *argv[])
         sr->mc.nu[0].genieIdx = channel_writer->GetGenieTree()->GetEntries(); //Updating the genie index correctly
         channel_writer->Fill();
         channel_writer->GetGenieTree()->Fill();
+
+        delete genie_record->event;
     }
 
     std::cout << std::endl;
