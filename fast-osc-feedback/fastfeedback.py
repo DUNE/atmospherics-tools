@@ -399,6 +399,7 @@ class FakeResolution:
     - resolutions (list): A list of resolutions corresponding to each bin.
     - bin_var (pl.Expr): The variable used for binning.
     - shifts (list, optional): A list of shifts corresponding to each bin. Default is None.
+    - is_relative (bool, optional): A flag indicating whether the resolutions are relative. Default is True.
 
     Raises:
     - ValueError: If the length of bins plus 1 is not equal to the length of resolutions.
@@ -408,12 +409,13 @@ class FakeResolution:
 
     """
 
-    def __init__(self, bins, resolutions, bin_var:pl.Expr, shifts=None):
+    def __init__(self, bins, resolutions, bin_var:pl.Expr, shifts=None, is_relative=True):
         if len(bins) + 1 != len(resolutions):
             raise ValueError("The resolutions must include the values outside the binning (below lowest bin and above highest bin)")
             
         self._bins = bins
         self._resolutions = resolutions
+        self._is_relative = is_relative
         self.bin_var = bin_var
         if shifts is not None:
             assert len(shifts) == len(resolutions)
@@ -434,7 +436,11 @@ class FakeResolution:
 
         """
         bin_sort = np.digitize(bin_var_values, self._bins)
-        fake_values = true_values*np.random.normal(1, self._resolutions[bin_sort]) + self._shifts[bin_sort]
+        if self._is_relative:
+            fake_values = true_values*np.random.normal(1, self._resolutions[bin_sort])
+        else:
+            fake_values = true_values + np.random.normal(0, self._resolutions[bin_sort])
+        fake_values += self._shifts[bin_sort] #Adding shifts
         return fake_values
 
 class EventDistrib:
