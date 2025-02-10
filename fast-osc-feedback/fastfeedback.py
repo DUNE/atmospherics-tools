@@ -398,6 +398,7 @@ class FakeResolution:
     - bins (list): A list of bin values.
     - resolutions (list): A list of resolutions corresponding to each bin.
     - bin_var (pl.Expr): The variable used for binning.
+    - shifts (list, optional): A list of shifts corresponding to each bin. Default is None.
 
     Raises:
     - ValueError: If the length of bins plus 1 is not equal to the length of resolutions.
@@ -407,13 +408,18 @@ class FakeResolution:
 
     """
 
-    def __init__(self, bins, resolutions, bin_var:pl.Expr):
+    def __init__(self, bins, resolutions, bin_var:pl.Expr, shifts=None):
         if len(bins) + 1 != len(resolutions):
             raise ValueError("The resolutions must include the values outside the binning (below lowest bin and above highest bin)")
             
         self._bins = bins
         self._resolutions = resolutions
         self.bin_var = bin_var
+        if shifts is not None:
+            assert len(shifts) == len(resolutions)
+            self._shifts = shifts
+        else:
+            self._shifts = np.zeros(len(resolutions))
 
     def generate(self, bin_var_values:pl.Series, true_values:pl.Series):
         """
@@ -428,7 +434,7 @@ class FakeResolution:
 
         """
         bin_sort = np.digitize(bin_var_values, self._bins)
-        fake_values = true_values*np.random.normal(1, self._resolutions[bin_sort])
+        fake_values = true_values*np.random.normal(1, self._resolutions[bin_sort]) + self._shifts[bin_sort]
         return fake_values
 
 class EventDistrib:
@@ -450,6 +456,7 @@ class EventDistrib:
         fieldRecoE (str, optional): Name of the column indicating the reconstructed energy. Default is 'recoE'.
         fieldRecoDir (str, optional): Name of the column indicating the reconstructed direction. Default is 'direc_reco'.
         fieldRecoFlv (str, optional): Name of the column indicating the reconstructed flavor. Default is 'reco_pdg'.
+        exposure (float, optional): The exposure in kt.yr. Default is 400.
 
     Attributes:
         events (polars.DataFrame): DataFrame containing event data.
@@ -462,6 +469,7 @@ class EventDistrib:
         fieldRecoE (str): Name of the column indicating the reconstructed energy.
         fieldRecoDir (str): Name of the column indicating the reconstructed direction.
         fieldRecoFlv (str): Name of the column indicating the reconstructed flavor.
+        exposure (float): The exposure in kt.yr.
         hists (dict): Dictionary containing the histograms for different channels.
         Ebins (array-like): Energy bin edges for true energy.
         Czbins (array-like): Cosine zenith angle bin edges for true direction.
@@ -484,7 +492,8 @@ class EventDistrib:
     def __init__(self, events, Ebins, Czbins, Ebins_reco, Czbins_reco,
                  fieldIsCC='isCC', fieldNuGen="nuPDG", fieldNueFlux="nue_w",
                  fieldNumuFlux="numu_w", fieldTrueE="Ev", fieldTrueDir="direc_true",
-                 fieldRecoE="recoE", fieldRecoDir="direc_reco", fieldRecoFlv="reco_pdg"):
+                 fieldRecoE="recoE", fieldRecoDir="direc_reco", fieldRecoFlv="reco_pdg",
+                 exposure = 400):
         
         self.events = events
         self.fieldIsCC = fieldIsCC
@@ -496,6 +505,7 @@ class EventDistrib:
         self.fieldRecoE = fieldRecoE
         self.fieldRecoDir = fieldRecoDir
         self.fieldRecoFlv = fieldRecoFlv
+        self.exposure = exposure
 
         self._fill_hists(Ebins, Czbins, Ebins_reco, Czbins_reco)
         self.osc = ROOT.Oscillogram(Ebins, Czbins)
@@ -549,6 +559,8 @@ class EventDistrib:
                 weights = selected[self.fieldNueFlux]
             else:
                 weights = selected[self.fieldNumuFlux]
+
+            weights *= 400./self.exposure #400kt.yr is the ref exposure
 
             full_ch = (ifl, ofl, detected_fl)
 
