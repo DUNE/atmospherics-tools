@@ -285,7 +285,7 @@ class DataManager:
         elif method == Method.Efficiency:
             if not isinstance(arg, FakeResolution):
                 raise ValueError("A polars FakeResolution object is expected when using the Method.Efficiency method")
-            self.direc_reco = lambda: pl.lit(arg.generate(self.data[arg.bin_var], self.data['direc_true']))
+            self.direc_reco = lambda: pl.lit(arg.generate(self.data.select(arg.bin_var).to_series(), self.data['direc_true']))
         else:
             raise ValueError()
 
@@ -706,9 +706,9 @@ class EventDistrib:
             raise ValueError(f"No oscillogram found for {ifl.name} -> {ofl.name}")
         osc_id = channels.index((ifl, ofl))
 
-        fig = plt.figure()
-        plt.pcolormesh(self.Ebins, self.Czbins, self.oscillograms[:, :, osc_id], cmap='jet')
-        plt.xscale('log')
+        fig = plt.figure(figsize=(4,3))
+        plt.pcolormesh(self.Ebins, self.Czbins, self.oscillograms[:, :, osc_id], cmap='plasma')
+        # plt.xscale('log')
         plt.title(f"{ifl.name} -> {ofl.name}")
         plt.xlabel("E [GeV]")
         plt.ylabel("Zenith angle")
