@@ -706,9 +706,9 @@ class EventDistrib:
             raise ValueError(f"No oscillogram found for {ifl.name} -> {ofl.name}")
         osc_id = channels.index((ifl, ofl))
 
-        fig = plt.figure(figsize=(4,3))
+        fig = plt.figure()
         plt.pcolormesh(self.Ebins, self.Czbins, self.oscillograms[:, :, osc_id], cmap='plasma')
-        # plt.xscale('log')
+        plt.xscale('log')
         plt.title(f"{ifl.name} -> {ofl.name}")
         plt.xlabel("E [GeV]")
         plt.ylabel("Zenith angle")
