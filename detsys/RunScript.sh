@@ -1,0 +1,1 @@
+./build/app/ComparisonScript -i /exp/dune/app/users/pgranger/CAF_test/work/caf_examples/caf_example_hd.root --ref_flux /exp/dune/app/users/pgranger/atmospherics/test_power_spectrum/fluxes/honda_2d_homestake_2015_numu.root --fluxdir /exp/dune/app/users/pgranger/atmospherics/test_power_spectrum/fluxes -o weighted_caf.root
