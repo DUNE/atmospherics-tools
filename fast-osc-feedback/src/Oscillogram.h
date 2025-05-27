@@ -16,7 +16,7 @@ struct OscPars
 
 class Oscillogram {
     public:
-        Oscillogram(const std::vector<double> &Ebins, const std::vector<double> &Czbins);
+        Oscillogram(const std::vector<double> &Ebins, const std::vector<double> &Czbins, const std::string &premPath);
 
         std::vector<double> Compute(OscPars pars);
 

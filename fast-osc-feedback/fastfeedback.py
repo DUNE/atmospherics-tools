@@ -14,6 +14,8 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 lib_oscprob = dir_path + '/build/oscprob-src/lib/libOscProb.so'
 lib_oscillogram = dir_path + '/build/src/libOscillogram.so'
 
+prem_default = dir_path + '/build/oscprob-src/PremTables/prem_15layers.txt'
+
 
 ROOT.gSystem.Load(lib_oscprob)
 ROOT.gSystem.Load(lib_oscillogram)
@@ -164,8 +166,8 @@ class DataManager:
 
             direc_numu = fix_empty_arrays(f['cafTree/rec/common/common.ixn.pandora/common.ixn.pandora.dir.lngtrk.y'].array())
             direc_nue = fix_empty_arrays(f['cafTree/rec/common/common.ixn.pandora/common.ixn.pandora.dir.heshw.y'].array())
-            weights['direc_numu'] = ak.flatten(direc_numu)
-            weights['direc_nue'] = ak.flatten(direc_nue)
+            weights['direc_numu'] = -ak.flatten(direc_numu) #Minus sign to have the convention negative=upgoing neutrinos
+            weights['direc_nue'] = -ak.flatten(direc_nue) #Minus sign to have the convention negative=upgoing neutrinos
 
             cvn_nue = fix_empty_arrays(f['cafTree/rec/common/common.ixn.pandora/common.ixn.pandora.nuhyp.cvn.nue'].array())
             cvn_numu = fix_empty_arrays(f['cafTree/rec/common/common.ixn.pandora/common.ixn.pandora.nuhyp.cvn.numu'].array())
@@ -173,7 +175,7 @@ class DataManager:
             weights['cvn_numu'] = ak.flatten(cvn_numu)
             weights['cvn_nue'] = ak.flatten(cvn_nue)
         
-        weights['direc_true'] = weights['NuMomY']/weights['Ev']
+        weights['direc_true'] = -weights['NuMomY']/weights['Ev'] #Minus sign to have the convention negative=upgoing neutrinos
         weights['nue_w'] *= weights["xsec"]
         weights['numu_w'] *= weights["xsec"]
 
@@ -499,7 +501,7 @@ class EventDistrib:
                  fieldIsCC='isCC', fieldNuGen="nuPDG", fieldNueFlux="nue_w",
                  fieldNumuFlux="numu_w", fieldTrueE="Ev", fieldTrueDir="direc_true",
                  fieldRecoE="recoE", fieldRecoDir="direc_reco", fieldRecoFlv="reco_pdg",
-                 exposure = 400):
+                 exposure = 400, prem=prem_default):
         
         self.events = events
         self.fieldIsCC = fieldIsCC
@@ -514,7 +516,7 @@ class EventDistrib:
         self.exposure = exposure
 
         self._fill_hists(Ebins, Czbins, Ebins_reco, Czbins_reco)
-        self.osc = ROOT.Oscillogram(Ebins, Czbins)
+        self.osc = ROOT.Oscillogram(Ebins, Czbins, prem)
 
     def _fill_hists(self, Ebins, Czbins, Ebins_reco, Czbins_reco):
         """

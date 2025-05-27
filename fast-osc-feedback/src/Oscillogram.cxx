@@ -2,9 +2,11 @@
 
 using namespace OscProb;
 
-Oscillogram::Oscillogram(const std::vector<double> &Ebins, const std::vector<double> &Czbins) :
+Oscillogram::Oscillogram(const std::vector<double> &Ebins, const std::vector<double> &Czbins, const std::string &premPath) :
 _Ebins(Ebins),
-_Czbins(Czbins){
+_Czbins(Czbins),
+_prem(PremModel(premPath))
+{
 }
 
 std::vector<double> Oscillogram::Compute(OscPars pars){
@@ -16,8 +18,6 @@ std::vector<double> Oscillogram::Compute(OscPars pars){
     _pmns.SetDelta(1, 3, pars.dcp);
 
     _pmns.SetAvgProbPrec(0.01); //Setting the precision for the averaging
-
-    _prem = PremModel("/home/pgranger/OscProb/PremTables/prem_15layers.txt"); //TODO: Find a way to automate this location)
 
 
     int N_Ebins = _Ebins.size() - 1;

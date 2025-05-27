@@ -1,7 +1,9 @@
 project(FastFeedback)
 
-add_library(Oscillogram SHARED Oscillogram.cxx)
+#Set CMAKE_SHARED_LIBRARY_SUFFIX to .so
+set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
 
+add_library(Oscillogram SHARED Oscillogram.cxx)
 
 message(STATUS "Include dir -> ${OSCPROB_INCLUDE_DIR}")
 target_include_directories(Oscillogram PUBLIC ${OSCPROB_INCLUDE_DIR})
