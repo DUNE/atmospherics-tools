@@ -30,6 +30,8 @@ struct Data
   int ipnu;
   T LepTheta; 
   T Q2;
+  T RecoCZ;
+  T TrueCZ;
   double weight; //Have to hardcode that here for now.
   double genie_weight; //Have to hardcode that here for now.
   T flux_nue;
@@ -81,9 +83,8 @@ static inline Data<double> float2double(const Data<float>& data){
   data_D.BeRPA_A_cvwgt = data.BeRPA_A_cvwgt;
   data_D.weightVec = data.weightVec;
   data_D.genie_weight = data.genie_weight;
-
-
-
+  data_D.RecoCZ = data.RecoCZ;
+  data_D.TrueCZ = data.TrueCZ;
 
   return data_D;
 }

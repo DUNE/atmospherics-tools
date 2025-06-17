@@ -59,10 +59,33 @@ if(NOT TARGET GENIE3::All)
   message(FATAL_ERROR "Expected find_package(GENIE3 REQUIRED) call to set up target GENIE3::All.")
 endif()
 
+file(
+  DOWNLOAD
+  https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.40.2/CPM.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake
+)
+include(${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake)
 
+#YAML for reading in config files
+set(YAML_CPP_VERSION 0.8.0) #KS: We need it for version.h file also define this number only once
+CPMAddPackage(
+    NAME yaml-cpp
+    VERSION ${YAML_CPP_VERSION}
+    GITHUB_REPOSITORY "jbeder/yaml-cpp"
+    GIT_TAG "${YAML_CPP_VERSION}"
+    GIT_SHALLOW YES
+    OPTIONS
+      "YAML_CPP_INSTALL ON"
+      "YAML_CPP_BUILD_TESTS OFF"
+      "YAML_CPP_BUILD_CONTRIB OFF"
+      "YAML_BUILD_SHARED_LIBS ON"
+)
+
+if(NOT TARGET yaml-cpp::yaml-cpp)
+  cmessage(FATAL_ERROR "MaCh3 Expected dependency target: yaml-cpp::yaml-cpp")
+endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
-
 
 FetchContent_Declare(
     argparse

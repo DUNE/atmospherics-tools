@@ -1,0 +1,22 @@
+Samples:
+  - Name: "Nominal Monte Carlo"
+    FilePath: "./weighted_caf.root"
+    TupleName: ""
+    Colour: 1
+
+Observables:
+
+  - Name: "Reconstructed Cosine Zenith"
+    Axes:
+      - Variable: "kNuRecoCosZ"
+        Label: "Reconstructed Cosine Zenith"
+        Binning: [-1.0,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.0]
+      - Variable: "kNuTrueCosZ"
+        Label: "True Cosine Zenith"
+        Binning: [-1.0,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.0]
+
+  - Name: "True Cosine Zenith"
+    Axes:
+      - Variable: "kNuTrueCosZ"
+        Label: "True Cosine Zenith"
+        Binning: [-1.0,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.0]
