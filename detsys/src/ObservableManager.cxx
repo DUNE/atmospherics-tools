@@ -41,7 +41,7 @@ Observable<T>::Observable(YAML::Node ObservableConfig) {
     throw;
   } else if (nDimensions == 1) {
     std::string HistName = Name+"_0";
-    std::string HistTitle = Axes[0].Label+";Number of Events";
+    std::string HistTitle = Axes[0].Label+";"+Axes[0].Label+";Number of Events";
     int nBins = Axes[0].Binning.size()-1;
     
     if (typeid(T) == typeid(float)) {

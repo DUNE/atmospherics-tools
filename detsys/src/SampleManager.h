@@ -27,8 +27,11 @@ class Sample {
 
  public:
   Sample(YAML::Node Config);
+  void Scale(T ScaleFactor);
   void SetObservables(ObservableManager<T>* Observable);
   void ReadData();
+  int GetNEvents() {return SampleReader->GetNentries();}
+  std::string GetName() {return Name;}
   TH1* GetMeasurement(int iMeas);
 };
 
@@ -40,6 +43,7 @@ class SampleManager {
   
  public:
   SampleManager(YAML::Node Config);
+  void ScaleToNormalisation(std::string SampleNameToNormTo);
 
   void SetObservables(ObservableManager<T>* Observable_) {
     ObsManager = Observable_;
@@ -55,7 +59,7 @@ class SampleManager {
     }
   }
 
-  void Plot1D(std::string OutputFileName);
+  void Plot1D(YAML::Node Config);
 };
 
 template class Sample<float>;

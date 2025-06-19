@@ -18,6 +18,12 @@ int main(int argc, char const *argv[]) {
   Samples.SetObservables(&Observables);
   Samples.ReadData();
 
-  Samples.Plot1D("1DPlots.pdf");
+  if (Config["General"]["ScaleNormalisationTo"]) {
+    Samples.ScaleToNormalisation(Config["General"]["ScaleNormalisationTo"].as<std::string>());
+  }
+
+  YAML::Node DrawOptions = Config["DrawOptions"];
+  Samples.Plot1D(DrawOptions);
+
   return 0;
 }

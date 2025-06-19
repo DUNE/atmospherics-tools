@@ -1,8 +1,27 @@
+General:
+  ScaleNormalisationTo: "Default"
+
+DrawOptions:
+  OneDim_PlotOutputName: "1DPlots.pdf"
+  OneDim_DrawOpts: "HIST E1"
+  OneDim_LegendHeight: 0.15
+  OneDim_LegendFontSize: 0.03
+
+  OneDim_SampleNameToNormTo: "Default"
+
 Samples:
-  - Name: "Nominal Monte Carlo"
-    FilePath: "./weighted_caf.root"
-    TupleName: ""
+  - Name: "Default"
+    FilePath: "./data/Nominal"
+    TupleName: "cafmaker"
     Colour: 1
+  - Name: "Plus NSigma"
+    FilePath: "./data/PNSigma"
+    TupleName: "cafmaker"
+    Colour: 2
+  - Name: "Minus NSigma"
+    FilePath: "./data/MNSigma"
+    TupleName: "cafmaker"
+    Colour: 4
 
 Observables:
 
@@ -13,6 +32,12 @@ Observables:
         Binning: [-1.0,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.0]
       - Variable: "kNuTrueCosZ"
         Label: "True Cosine Zenith"
+        Binning: [-1.0,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.0]
+
+  - Name: "Reco Cosine Zenith"
+    Axes:
+      - Variable: "kNuRecoCosZ"
+        Label: "Reco Cosine Zenith"
         Binning: [-1.0,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.0]
 
   - Name: "True Cosine Zenith"

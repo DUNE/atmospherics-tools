@@ -1,6 +1,7 @@
 #pragma once
 #include "TFile.h"
 #include "TTree.h"
+#include "TChain.h"
 #include <iostream>
 #include <memory>
 
@@ -17,14 +18,15 @@ class Reader {
  private:
   std::string _fname = "";
   TFile *_file = nullptr;
-  TTree *_tree = nullptr;
-  TTree *_global_tree = nullptr;
+  TChain *_Chain = nullptr;
+  TChain *_global_chain = nullptr;
   TTree *_genie_tree = nullptr;
   double _POT = 0;
   Data<T> _data;
   int _nentries;
   int _entry = -1;
-  caf::StandardRecordProxy* _sr = nullptr;
+  //caf::StandardRecordProxy* _sr = nullptr;
+  caf::StandardRecord* _sr = nullptr;
   
   void Open(std::string fname, std::string subfolder);
   void SetupTree();
@@ -34,14 +36,14 @@ class Reader {
   
  public:
   Reader(std::string fname, std::string subfolder = "");
-  Reader(TTree *tree);
+  Reader(TChain *Chain);
   ~Reader();
   double POT(){return _POT;};
   bool GetEntry(int i = -1);
   const Data<T>& GetData();
-  TTree* GetGlobalTree();
+  TChain* GetGlobalTree();
   TTree* GetGenieTree();
-  TTree* GetTree();
+  TChain* GetTree();
   TFile* GetFile();
   int GetNentries();
   const T ReturnKinematicParameter(int Par);

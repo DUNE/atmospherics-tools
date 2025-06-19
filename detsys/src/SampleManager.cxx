@@ -1,6 +1,7 @@
 #include "SampleManager.h"
 
 #include "TCanvas.h"
+#include "TLegend.h"
 
 template<typename T>
 Sample<T>::Sample(YAML::Node SampleConfig) {
@@ -19,6 +20,8 @@ Sample<T>::Sample(YAML::Node SampleConfig) {
 
 template<typename T>
 void Sample<T>::ReadData() {
+  std::cout << "Reading data from:" << Name << std::endl;
+
   for (int i=0;i<SampleReader->GetNentries();i++) {
     SampleReader->GetEntry(i);
     
@@ -39,8 +42,7 @@ void Sample<T>::ReadData() {
       }
 
     }
-    
-  } 
+  }
 
   std::cout << std::endl;
 }
@@ -53,6 +55,7 @@ void Sample<T>::SetObservables(ObservableManager<T>* ObsManager) {
 
     TH1* Hist = ObsManager->GetObservable(iObs)->ReturnTemplateHistogram();
     Meas.Histogram = static_cast<TH1*>(Hist->Clone());
+    Meas.Histogram->Sumw2();
 
     std::string HistName = std::string(Meas.Histogram->GetName())+"_"+Name;
     std::replace(HistName.begin(),HistName.end(),' ','_');
@@ -117,6 +120,13 @@ TH1* Sample<T>::GetMeasurement(int iMeas) {
   throw;
 }
 
+template<typename T>
+void Sample<T>::Scale(T ScaleFactor) {
+  for (int iMeas=0;iMeas<(int)Measurements.size();iMeas++) {
+    Measurements[iMeas].Histogram->Scale(ScaleFactor);
+  }
+}
+
 //==========================================================================================================================================================
 
 template<typename T>
@@ -127,27 +137,141 @@ SampleManager<T>::SampleManager(YAML::Node Config) {
 }
 
 template<typename T>
-void SampleManager<T>::Plot1D(std::string OutputFileName) {
+void SampleManager<T>::ScaleToNormalisation(std::string SampleNameToNormTo) {
+  int IndexToNormTo = -1;
+
+  for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
+    if (Samples[iSamp]->GetName() == SampleNameToNormTo) {
+      IndexToNormTo = iSamp;
+      break;
+    }
+  }
+  if (IndexToNormTo == -1) {
+    std::cerr << "Did not find:" << SampleNameToNormTo << std::endl;
+    std::cerr << "Available:" << std::endl;
+    for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
+      std::cerr << "\t" << iSamp << " " << Samples[iSamp]->GetName() << std::endl;
+    }
+  }
+  
+  for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
+    T Factor = (T)Samples[IndexToNormTo]->GetNEvents()/(T)Samples[iSamp]->GetNEvents();
+    Samples[iSamp]->Scale(Factor);
+  }
+}
+
+template<typename T>
+void SampleManager<T>::Plot1D(YAML::Node Config) {
+
+  std::string OutputFileName = Config["OneDim_PlotOutputName"].as<std::string>();
+  std::string DrawOptions = Config["OneDim_DrawOpts"].as<std::string>();
+  T LegendHeight = Config["OneDim_LegendHeight"].as<T>();
+  T FontSize = Config["OneDim_LegendFontSize"].as<T>();
+
+  std::string SampleNameToNormTo = Config["OneDim_SampleNameToNormTo"].as<std::string>();
+  T RatioYAxisMax = _BAD_VALUE_;
+  if (Config["OneDim_RatioMaximum"]) {
+    RatioYAxisMax = Config["OneDim_RatioMaximum"].as<T>();
+  }
+  T RatioYAxisMin = _BAD_VALUE_;
+  if (Config["OneDim_RatioMinimum"]) {
+    RatioYAxisMin = Config["OneDim_RatioMinimum"].as<T>();
+  }
+
   int nSamples = Samples.size();
   int nObservables = ObsManager->GetNObservables();
 
   TCanvas* Canv = new TCanvas;
+  Canv->SetRightMargin(0.2);
   Canv->Print((OutputFileName+"[").c_str());
+
+  std::vector<TLegend*> Legends(nSamples);
+  std::vector<TH1*> Hists(nSamples);
 
   for (int iObs=0;iObs<nObservables;iObs++) {
     if (ObsManager->GetObservable(iObs)->GetNDimensions() != 1) continue;
 
     for (int iSamp=0;iSamp<nSamples;iSamp++) {
-      TH1* Hist = Samples[iSamp]->GetMeasurement(iObs);
+      Hists[iSamp] = Samples[iSamp]->GetMeasurement(iObs);
+
+      TH1* Hist = Hists[iSamp];
+      Hist->SetStats(false);
       
       if (iSamp==0) {
-	Hist->Draw();
+	Hist->Draw(DrawOptions.c_str());
       } else {
-	Hist->Draw("SAME");
+	Hist->Draw((DrawOptions+" SAME").c_str());
       }
+
+      Legends[iSamp] = new TLegend(0.8,0.9-(1+iSamp)*LegendHeight,0.99,0.9-iSamp*LegendHeight);
+      Legends[iSamp]->SetTextSize(FontSize);
+      Legends[iSamp]->AddEntry(Hist,(Samples[iSamp]->GetName()).c_str(),"l");
+      Legends[iSamp]->AddEntry((TObject*)0,Form("Mean: %4.5f",Hist->GetMean()),"");
+      Legends[iSamp]->AddEntry((TObject*)0,Form("RMS: %4.5f",Hist->GetRMS()),"");
+      Legends[iSamp]->Draw();
     }
 
     Canv->Print(OutputFileName.c_str());
+
+    int IndexToNormTo = -1;
+    for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
+      if (Samples[iSamp]->GetName() == SampleNameToNormTo) {
+	IndexToNormTo = iSamp;
+	break;
+      }
+    }
+    if (IndexToNormTo == -1) {
+      std::cerr << "Did not find:" << SampleNameToNormTo << std::endl;
+      std::cerr << "Available:" << std::endl;
+      for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
+	std::cerr << "\t" << iSamp << " " << Samples[iSamp]->GetName() << std::endl;
+      }
+    }
+    
+    for (int iSamp=0;iSamp<nSamples;iSamp++) {
+      if (iSamp == IndexToNormTo) continue;
+      Hists[iSamp]->Divide(Hists[IndexToNormTo]);
+    }
+    Hists[IndexToNormTo]->Divide(Hists[IndexToNormTo]);
+
+    if (RatioYAxisMax != _BAD_VALUE_) {
+      for (int iSamp=0;iSamp<nSamples;iSamp++) {
+	Hists[iSamp]->SetMaximum(RatioYAxisMax);
+	Hists[iSamp]->SetMinimum(RatioYAxisMin);
+      }
+    } else {
+      T Max = -1e8;
+      T Min = 1e8;
+
+      for (int iSamp=0;iSamp<nSamples;iSamp++) {
+	if (Hists[iSamp]->GetMaximum() > Max) {Max = Hists[iSamp]->GetMaximum();}
+	if (Hists[iSamp]->GetMinimum() < Min) {Min = Hists[iSamp]->GetMinimum();}
+      }
+
+      for (int iSamp=0;iSamp<nSamples;iSamp++) {
+	Hists[iSamp]->SetMaximum(Max+1.3*(Max-Min));
+	Hists[iSamp]->SetMinimum(Min-1.3*(Max-Min));
+      }
+    }
+
+    for (int iSamp=0;iSamp<nSamples;iSamp++) {
+      Hists[iSamp]->GetYaxis()->SetTitle(std::string("Ratio to "+SampleNameToNormTo).c_str());
+
+      if (iSamp==0) {
+        Hists[iSamp]->Draw(DrawOptions.c_str());
+      } else {
+        Hists[iSamp]->Draw((DrawOptions+" SAME").c_str());
+      }
+
+      Legends[iSamp] = new TLegend(0.8,0.9-(1+iSamp)*LegendHeight,0.99,0.9-iSamp*LegendHeight);
+      Legends[iSamp]->SetTextSize(FontSize);
+      Legends[iSamp]->AddEntry(Hists[iSamp],(Samples[iSamp]->GetName()).c_str(),"l");
+      Legends[iSamp]->AddEntry((TObject*)0,Form("Mean: %4.5f",Hists[iSamp]->GetMean()),"");
+      Legends[iSamp]->AddEntry((TObject*)0,Form("RMS: %4.5f",Hists[iSamp]->GetRMS()),"");
+      Legends[iSamp]->Draw();
+    }
+
+    Canv->Print(OutputFileName.c_str());    
   }
 
   Canv->Print((OutputFileName+"]").c_str());
