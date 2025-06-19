@@ -16,7 +16,28 @@ Observable<T>::Observable(YAML::Node ObservableConfig) {
     A.Variable = AxisNode["Variable"].as<std::string>();
     A.Variable_Int = Kinematic_StringToInt(A.Variable);
     A.Label = AxisNode["Label"].as<std::string>();
-    A.Binning = AxisNode["Binning"].as<std::vector<T>>();
+
+    if (AxisNode["Binning"]) {
+      A.Binning = AxisNode["Binning"].as<std::vector<T>>();
+    } else if (AxisNode["BinDefinition"]) {
+      std::vector<T> BinDef = AxisNode["BinDefinition"].as<std::vector<T>>();
+      if (BinDef.size()!=3) {
+	std::cerr << "BinDefinition Node found. Expected 3 items [nBins,LowEdge,HighEdge]" << std::endl;
+	throw;
+      }
+
+      int nBins = (int)BinDef[0];
+      T LowBinEdge = BinDef[1];
+      T HighBinEdge = BinDef[2];
+
+      std::vector<T> Binning;
+      for (int iBin=0;iBin<nBins;iBin++) {
+	Binning.push_back(LowBinEdge+(T)iBin*(HighBinEdge-LowBinEdge)/(T)nBins);
+      }
+      Binning.push_back(HighBinEdge);
+
+      A.Binning = Binning;
+    }
     
     Axes.emplace_back(A);
   }

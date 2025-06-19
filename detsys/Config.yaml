@@ -54,3 +54,15 @@ Observables:
       - Variable: "kNuTrueCosZ"
         Label: "True Cosine Zenith"
         Binning: [-1.0,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.0]
+
+  - Name: "CVN NuMu"
+    Axes:
+      - Variable: "kCVNNuMu"
+        Label: "CVN NuMu"
+        BinDefinition: [10,0.,1.]
+
+  - Name: "CVN NuE"
+    Axes:
+      - Variable: "kCVNNuE"
+        Label: "CVN NuE"
+        BinDefinition: [10,0.,1.]

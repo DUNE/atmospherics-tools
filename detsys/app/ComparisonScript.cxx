@@ -8,8 +8,12 @@
 using FLOAT_T = float;
 
 int main(int argc, char const *argv[]) {
-
-  std::string ConfigFileName = "Config.yaml";
+  if (argc != 2) {
+    std::cout << "Usage: ./ComparisonScript Config.yaml" << std::endl;
+    throw; 
+  }
+  
+  std::string ConfigFileName = argv[1];
   YAML::Node Config = YAML::LoadFile(ConfigFileName);
 
   ObservableManager<FLOAT_T> Observables = ObservableManager<FLOAT_T>(Config);

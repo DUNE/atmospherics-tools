@@ -32,6 +32,8 @@ struct Data
   T Q2;
   T RecoCZ;
   T TrueCZ;
+  T cvn_numu;
+  T cvn_nue;
   double weight; //Have to hardcode that here for now.
   double genie_weight; //Have to hardcode that here for now.
   T flux_nue;
@@ -75,6 +77,8 @@ static inline Data<double> float2double(const Data<float>& data){
   data_D.LepTheta = data.LepTheta; 
   data_D.Q2 = data.Q2;
   data_D.weight = data.weight;
+  data_D.cvn_numu = data.cvn_numu;
+  data_D.cvn_nue = data.cvn_nue;
   data_D.flux_nue = data.flux_nue;
   data_D.flux_numu = data.flux_numu;
   data_D.xsec = data.xsec;

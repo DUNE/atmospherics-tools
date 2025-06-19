@@ -17,6 +17,8 @@ const double cvn_nue = 0.55;
 enum KinematicParameters {
   kNuRecoCosZ,
   kNuTrueCosZ,
+  kCVNNuMu,
+  kCVNNuE,
   nKinPars
 };
 
@@ -26,6 +28,12 @@ inline int Kinematic_StringToInt(std::string Str) {
   }
   if (Str == "kNuTrueCosZ") {
     return kNuTrueCosZ;
+  }
+  if (Str == "kCVNNuMu") {
+    return kCVNNuMu;
+  }
+  if (Str == "kCVNNuE") {
+    return kCVNNuE;
   }
 
   std::cerr << "Did not find std::string -> int mapping for string:" << Str << std::endl;

@@ -134,7 +134,12 @@ const T Reader<T>::ReturnKinematicParameter(int Par) {
     return _data.TrueCZ;
   case kNuRecoCosZ:
     return _data.RecoCZ;
+  case kCVNNuMu:
+    return _data.cvn_numu;
+  case kCVNNuE:
+    return _data.cvn_nue;
   }
+
 
   std::cerr << "Invalid kinematic parameter requested:" << Par << std::endl;
   throw;
@@ -163,10 +168,15 @@ void Reader<T>::UpdateData(){
     _data.erec = _BAD_VALUE_;
     _data.RecoCZ = _BAD_VALUE_;
     _data.Selection = Unsel;
+    _data.cvn_numu = _BAD_VALUE_;
+    _data.cvn_nue = _BAD_VALUE_;
     return;
   }
   
   _data.Selection = Sel::SelNC;
+  _data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.numu;
+  _data.cvn_nue = _sr->common.ixn.pandora[0].nuhyp.cvn.nue;
+
   if(_sr->common.ixn.pandora[0].nuhyp.cvn.numu > cvn_numu){
     _data.Selection = Sel::SelNuMu;
   }
