@@ -17,13 +17,14 @@ int main(int argc, char const *argv[]) {
   SampleManager<FLOAT_T> Samples = SampleManager<FLOAT_T>(Config);
   Samples.SetObservables(&Observables);
   Samples.ReadData();
+  std::cout << std::endl;
 
   if (Config["General"]["ScaleNormalisationTo"]) {
     Samples.ScaleToNormalisation(Config["General"]["ScaleNormalisationTo"].as<std::string>());
   }
 
-  YAML::Node DrawOptions = Config["DrawOptions"];
-  Samples.Plot1D(DrawOptions);
+  YAML::Node OneDimensionDrawingConfig = Config["DrawOptions"]["OneDimension"];
+  Samples.Plot1D(OneDimensionDrawingConfig);
 
   return 0;
 }

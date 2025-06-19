@@ -8,19 +8,17 @@ Sample<T>::Sample(YAML::Node SampleConfig) {
   Name = SampleConfig["Name"].as<std::string>();
   SampleColour = SampleConfig["Colour"].as<int>();
   FilePath = SampleConfig["FilePath"].as<std::string>();
-  TupleName = SampleConfig["TupleName"].as<std::string>();
+  TupleName = SampleConfig["SubDirectoryName"].as<std::string>();
 
   std::cout << "Initialising sample:" << Name << std::endl;
-
   SampleReader = new Reader<T>(FilePath, TupleName);
-  std::cout << "\tNEntries:" << SampleReader->GetNentries() << std::endl;
 
   std::cout << std::endl;
 }
 
 template<typename T>
 void Sample<T>::ReadData() {
-  std::cout << "Reading data from:" << Name << std::endl;
+  std::cout << "Reading data from Sample:" << Name << std::endl;
 
   for (int i=0;i<SampleReader->GetNentries();i++) {
     SampleReader->GetEntry(i);
@@ -43,8 +41,6 @@ void Sample<T>::ReadData() {
 
     }
   }
-
-  std::cout << std::endl;
 }
 
 template<typename T>
@@ -163,19 +159,27 @@ void SampleManager<T>::ScaleToNormalisation(std::string SampleNameToNormTo) {
 template<typename T>
 void SampleManager<T>::Plot1D(YAML::Node Config) {
 
-  std::string OutputFileName = Config["OneDim_PlotOutputName"].as<std::string>();
-  std::string DrawOptions = Config["OneDim_DrawOpts"].as<std::string>();
-  T LegendHeight = Config["OneDim_LegendHeight"].as<T>();
-  T FontSize = Config["OneDim_LegendFontSize"].as<T>();
+  std::string OutputFileName = Config["OutputName"].as<std::string>();
+  std::string DrawOptions = Config["DrawOpts"].as<std::string>();
+  std::string SampleNameToNormTo = Config["RatioDenominatorSample"].as<std::string>();
 
-  std::string SampleNameToNormTo = Config["OneDim_SampleNameToNormTo"].as<std::string>();
+  T LegendHeight = 0.2;
+  if (Config["LegendHeight"]) {
+    LegendHeight = Config["LegendHeight"].as<T>();
+  }
+
+  T FontSize = _BAD_VALUE_;
+  if (Config["LegendFontSize"]) {
+    FontSize = Config["LegendFontSize"].as<T>();
+  }
+
   T RatioYAxisMax = _BAD_VALUE_;
-  if (Config["OneDim_RatioMaximum"]) {
-    RatioYAxisMax = Config["OneDim_RatioMaximum"].as<T>();
+  if (Config["RatioMaximum"]) {
+    RatioYAxisMax = Config["RatioMaximum"].as<T>();
   }
   T RatioYAxisMin = _BAD_VALUE_;
-  if (Config["OneDim_RatioMinimum"]) {
-    RatioYAxisMin = Config["OneDim_RatioMinimum"].as<T>();
+  if (Config["RatioMinimum"]) {
+    RatioYAxisMin = Config["RatioMinimum"].as<T>();
   }
 
   int nSamples = Samples.size();

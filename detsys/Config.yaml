@@ -1,35 +1,44 @@
 General:
-  ScaleNormalisationTo: "Default"
+  ScaleNormalisationTo: "Default" #Optional - Normalises the integral of all the distributions to the defined sample. The defined sample must match one of the [Samples][Name] nodes defined below
 
 DrawOptions:
-  OneDim_PlotOutputName: "1DPlots.pdf"
-  OneDim_DrawOpts: "HIST E1"
-  OneDim_LegendHeight: 0.15
-  OneDim_LegendFontSize: 0.03
+  OneDimension:
+    OutputName: "1DPlots.pdf" #Output of the file which has all the 1D plots
+    DrawOpts: "HIST E1" #Used for both full plot and the ratio plot
+    RatioDenominatorSample: "Default" #Must match one of the [Samples][Name] nodes defined below
 
-  OneDim_SampleNameToNormTo: "Default"
+    LegendHeight: 0.15 #Optional - Defines the height of each legend box
+    LegendFontSize: 0.03 #Optional - Defines the font size used in each legend box
+    RatioMaximum: 1.2 #Optional - Defines the maximum of the Y-axis used in the ratio plot
+    RatioMinimum: 0.8 #Optional - Defines the minimum of the Y-axis used in the ratio plot
 
 Samples:
-  - Name: "Default"
-    FilePath: "./data/Nominal"
-    TupleName: "cafmaker"
-    Colour: 1
+  - Name: "Default" #Sample Identifier name
+    FilePath: "./data/Nominal" #Path to directory which contains the set of CAF files to use for this sample. It will grab all "*.root" files within that directory
+    SubDirectoryName: "cafmaker" #The CAF files are expected to contain the 'cafTree', 'meta' and 'genieEvt' TTrees. Sometimes, but not all the time, these TTrees are contained in a subdirectory (i.e. 'cafmaker')
+    Colour: 1 #Colour from ROOT Colour Wheel
   - Name: "Plus NSigma"
     FilePath: "./data/PNSigma"
-    TupleName: "cafmaker"
-    Colour: 2
+    SubDirectoryName: "cafmaker"
+    Colour: 2 
   - Name: "Minus NSigma"
     FilePath: "./data/MNSigma"
-    TupleName: "cafmaker"
-    Colour: 4
+    SubDirectoryName: "cafmaker"
+    Colour: 4 
+
+#The way in which variables are grabbed from the MC is as follows:
+#First, the [Observables][Axes][Variable] string is converted to an enum here: https://github.com/DUNE/atmospherics-tools/blob/b25e0400f2a571a4e4b6e4bddee58579e7dc37b0/detsys/src/Constants.h#L17-L34
+
+#Second, the mapping of that enum to a CAF variable is done through this function: https://github.com/DUNE/atmospherics-tools/blob/b25e0400f2a571a4e4b6e4bddee58579e7dc37b0/detsys/src/Reader.cxx#L131-L141
+#This returns any variable stored in the 'Data' struct: https://github.com/DUNE/atmospherics-tools/blob/b25e0400f2a571a4e4b6e4bddee58579e7dc37b0/detsys/src/Data.h#L6
+#Which get filled from the CAF file e.g. here: https://github.com/DUNE/atmospherics-tools/blob/b25e0400f2a571a4e4b6e4bddee58579e7dc37b0/detsys/src/Reader.cxx#L150
 
 Observables:
-
-  - Name: "Reconstructed Cosine Zenith"
-    Axes:
-      - Variable: "kNuRecoCosZ"
-        Label: "Reconstructed Cosine Zenith"
-        Binning: [-1.0,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.0]
+  - Name: "Reconstructed Cosine Zenith" #Observable Identifier name
+    Axes: #Can have one or two axes per observable
+      - Variable: "kNuRecoCosZ" #String used to determine which CAF variable gets returned for this axis.
+        Label: "Reconstructed Cosine Zenith" #Axes title used in plotting
+        Binning: [-1.0,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.0] #Bin edges used for axis
       - Variable: "kNuTrueCosZ"
         Label: "True Cosine Zenith"
         Binning: [-1.0,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.0]

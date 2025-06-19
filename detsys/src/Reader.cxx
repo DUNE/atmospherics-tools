@@ -49,12 +49,12 @@ void Reader<T>::Open(std::string fname, std::string subfolder) {
 
     TFile File = TFile(filename.c_str());
     if (File.IsZombie()) {
-      std::cerr << filename << " is not a valid root file" << std::endl;
+      std::cerr << "\t" << filename << " is not a valid root file" << std::endl;
       continue;
     }
     TTree* Tree = (TTree*)File.Get(tree_name.c_str());
     if (!Tree) {
-      std::cerr << filename << " does not contain" << tree_name << std::endl;
+      std::cerr << "\t" << filename << " does not contain" << tree_name << std::endl;
       continue;
     }
 
