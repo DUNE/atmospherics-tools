@@ -9,7 +9,8 @@ enum Flavour{
     NuTau = 16,
     NuEBar = -12,
     NuMuBar = -14,
-    NuTauBar = -16
+    NuTauBar = -16,
+    Reference = 0
 };
 
 static std::map<Flavour, std::string> flavours = {

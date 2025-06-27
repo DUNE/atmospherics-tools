@@ -29,7 +29,7 @@ target_include_directories(weightor
 
 add_executable(split_channels split_channels.cxx)
 target_link_libraries(split_channels
-  LINK_PUBLIC WeightorIO ROOT::EG ${ROOT_LIBRARIES} argparse)
+  LINK_PUBLIC WeightorIO ROOT::EG ${ROOT_LIBRARIES} argparse GENIE3::All)
 target_include_directories(split_channels
   PRIVATE
   $ENV{SRPROXY_INC}

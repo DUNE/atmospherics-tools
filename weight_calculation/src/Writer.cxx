@@ -89,6 +89,7 @@ void Writer::SetupTree(){
 
 void Writer::Write(){
     // _tree->SetDirectory(_file);
+    _file->cd();
     std::cout << "Nentries: " << _tree->GetEntries() << std::endl;
     _tree->Write();
 

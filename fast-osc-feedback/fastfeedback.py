@@ -14,6 +14,8 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 lib_oscprob = dir_path + '/build/oscprob-src/lib/libOscProb.so'
 lib_oscillogram = dir_path + '/build/src/libOscillogram.so'
 
+prem_default = dir_path + '/build/oscprob-src/PremTables/prem_15layers.txt'
+
 
 ROOT.gSystem.Load(lib_oscprob)
 ROOT.gSystem.Load(lib_oscillogram)
@@ -164,8 +166,8 @@ class DataManager:
 
             direc_numu = fix_empty_arrays(f['cafTree/rec/common/common.ixn.pandora/common.ixn.pandora.dir.lngtrk.y'].array())
             direc_nue = fix_empty_arrays(f['cafTree/rec/common/common.ixn.pandora/common.ixn.pandora.dir.heshw.y'].array())
-            weights['direc_numu'] = ak.flatten(direc_numu)
-            weights['direc_nue'] = ak.flatten(direc_nue)
+            weights['direc_numu'] = -ak.flatten(direc_numu) #Minus sign to have the convention negative=upgoing neutrinos
+            weights['direc_nue'] = -ak.flatten(direc_nue) #Minus sign to have the convention negative=upgoing neutrinos
 
             cvn_nue = fix_empty_arrays(f['cafTree/rec/common/common.ixn.pandora/common.ixn.pandora.nuhyp.cvn.nue'].array())
             cvn_numu = fix_empty_arrays(f['cafTree/rec/common/common.ixn.pandora/common.ixn.pandora.nuhyp.cvn.numu'].array())
@@ -173,7 +175,7 @@ class DataManager:
             weights['cvn_numu'] = ak.flatten(cvn_numu)
             weights['cvn_nue'] = ak.flatten(cvn_nue)
         
-        weights['direc_true'] = weights['NuMomY']/weights['Ev']
+        weights['direc_true'] = -weights['NuMomY']/weights['Ev'] #Minus sign to have the convention negative=upgoing neutrinos
         weights['nue_w'] *= weights["xsec"]
         weights['numu_w'] *= weights["xsec"]
 
@@ -285,7 +287,7 @@ class DataManager:
         elif method == Method.Efficiency:
             if not isinstance(arg, FakeResolution):
                 raise ValueError("A polars FakeResolution object is expected when using the Method.Efficiency method")
-            self.direc_reco = lambda: pl.lit(arg.generate(self.data[arg.bin_var], self.data['direc_true']))
+            self.direc_reco = lambda: pl.lit(arg.generate(self.data.select(arg.bin_var).to_series(), self.data['direc_true']))
         else:
             raise ValueError()
 
@@ -398,6 +400,8 @@ class FakeResolution:
     - bins (list): A list of bin values.
     - resolutions (list): A list of resolutions corresponding to each bin.
     - bin_var (pl.Expr): The variable used for binning.
+    - shifts (list, optional): A list of shifts corresponding to each bin. Default is None.
+    - is_relative (bool, optional): A flag indicating whether the resolutions are relative. Default is True.
 
     Raises:
     - ValueError: If the length of bins plus 1 is not equal to the length of resolutions.
@@ -407,13 +411,19 @@ class FakeResolution:
 
     """
 
-    def __init__(self, bins, resolutions, bin_var:pl.Expr):
+    def __init__(self, bins, resolutions, bin_var:pl.Expr, shifts=None, is_relative=True):
         if len(bins) + 1 != len(resolutions):
             raise ValueError("The resolutions must include the values outside the binning (below lowest bin and above highest bin)")
             
         self._bins = bins
         self._resolutions = resolutions
+        self._is_relative = is_relative
         self.bin_var = bin_var
+        if shifts is not None:
+            assert len(shifts) == len(resolutions)
+            self._shifts = shifts
+        else:
+            self._shifts = np.zeros(len(resolutions))
 
     def generate(self, bin_var_values:pl.Series, true_values:pl.Series):
         """
@@ -428,7 +438,11 @@ class FakeResolution:
 
         """
         bin_sort = np.digitize(bin_var_values, self._bins)
-        fake_values = true_values*np.random.normal(1, self._resolutions[bin_sort])
+        if self._is_relative:
+            fake_values = true_values*np.random.normal(1, self._resolutions[bin_sort])
+        else:
+            fake_values = true_values + np.random.normal(0, self._resolutions[bin_sort])
+        fake_values += self._shifts[bin_sort] #Adding shifts
         return fake_values
 
 class EventDistrib:
@@ -450,6 +464,7 @@ class EventDistrib:
         fieldRecoE (str, optional): Name of the column indicating the reconstructed energy. Default is 'recoE'.
         fieldRecoDir (str, optional): Name of the column indicating the reconstructed direction. Default is 'direc_reco'.
         fieldRecoFlv (str, optional): Name of the column indicating the reconstructed flavor. Default is 'reco_pdg'.
+        exposure (float, optional): The exposure in kt.yr. Default is 400.
 
     Attributes:
         events (polars.DataFrame): DataFrame containing event data.
@@ -462,6 +477,7 @@ class EventDistrib:
         fieldRecoE (str): Name of the column indicating the reconstructed energy.
         fieldRecoDir (str): Name of the column indicating the reconstructed direction.
         fieldRecoFlv (str): Name of the column indicating the reconstructed flavor.
+        exposure (float): The exposure in kt.yr.
         hists (dict): Dictionary containing the histograms for different channels.
         Ebins (array-like): Energy bin edges for true energy.
         Czbins (array-like): Cosine zenith angle bin edges for true direction.
@@ -484,7 +500,8 @@ class EventDistrib:
     def __init__(self, events, Ebins, Czbins, Ebins_reco, Czbins_reco,
                  fieldIsCC='isCC', fieldNuGen="nuPDG", fieldNueFlux="nue_w",
                  fieldNumuFlux="numu_w", fieldTrueE="Ev", fieldTrueDir="direc_true",
-                 fieldRecoE="recoE", fieldRecoDir="direc_reco", fieldRecoFlv="reco_pdg"):
+                 fieldRecoE="recoE", fieldRecoDir="direc_reco", fieldRecoFlv="reco_pdg",
+                 exposure = 400, prem=prem_default):
         
         self.events = events
         self.fieldIsCC = fieldIsCC
@@ -496,9 +513,10 @@ class EventDistrib:
         self.fieldRecoE = fieldRecoE
         self.fieldRecoDir = fieldRecoDir
         self.fieldRecoFlv = fieldRecoFlv
+        self.exposure = exposure
 
         self._fill_hists(Ebins, Czbins, Ebins_reco, Czbins_reco)
-        self.osc = ROOT.Oscillogram(Ebins, Czbins)
+        self.osc = ROOT.Oscillogram(Ebins, Czbins, prem)
 
     def _fill_hists(self, Ebins, Czbins, Ebins_reco, Czbins_reco):
         """
@@ -549,6 +567,8 @@ class EventDistrib:
                 weights = selected[self.fieldNueFlux]
             else:
                 weights = selected[self.fieldNumuFlux]
+
+            weights *= 400./self.exposure #400kt.yr is the ref exposure
 
             full_ch = (ifl, ofl, detected_fl)
 
@@ -689,7 +709,7 @@ class EventDistrib:
         osc_id = channels.index((ifl, ofl))
 
         fig = plt.figure()
-        plt.pcolormesh(self.Ebins, self.Czbins, self.oscillograms[:, :, osc_id], cmap='jet')
+        plt.pcolormesh(self.Ebins, self.Czbins, self.oscillograms[:, :, osc_id], cmap='plasma')
         plt.xscale('log')
         plt.title(f"{ifl.name} -> {ofl.name}")
         plt.xlabel("E [GeV]")

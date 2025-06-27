@@ -3,6 +3,7 @@
 #include "SRWriter.h"
 #include "Calculator.h"
 #include "progressbar.hpp"
+#include "Framework/Ntuple/NtpMCEventRecord.h"
 #include <argparse/argparse.hpp>
 
 enum Sel{
@@ -66,9 +67,22 @@ int main(int argc, char const *argv[])
         std::cout << "No tree named weights in the input file " << ifilename << std::endl;
         abort();
     }
-    double nuE_flux, nuMu_flux, xsec_w;
+
+    TTree *genie_tree = nullptr;
+    ifile->GetObject("genieEvt", genie_tree);
+    if(genie_tree == nullptr){
+        std::cout << "No tree named genieEvt in the input file " << ifilename << std::endl;
+        abort();
+    }
+
+    genie::NtpMCEventRecord *genie_record = new genie::NtpMCEventRecord();
+    genie_tree->SetBranchAddress("genie_record", &genie_record);
+
+    double nuE_flux, nuMu_flux, xsec_w, osc_from_e_w, osc_from_mu_w;
     weights_tree->SetBranchAddress("flux_nue", &nuE_flux);
     weights_tree->SetBranchAddress("flux_numu", &nuMu_flux);
+    weights_tree->SetBranchAddress("osc_from_e_w", &osc_from_e_w);
+    weights_tree->SetBranchAddress("osc_from_mu_w", &osc_from_mu_w);
     weights_tree->SetBranchAddress("xsec", &xsec_w);
 
     caf::StandardRecord *sr = nullptr;
@@ -98,13 +112,13 @@ int main(int argc, char const *argv[])
 
                 std::string fname = ofilename + flavours[ifl] + "_x_" + flavours[ofl] + "_" + sel_str + ".root";
                 SRWriter *ch_writer = new SRWriter(fname, sr);
+                ch_writer->SetGenieTree(genie_tree->CloneTree(0));
                 channels.insert({{ifl, ofl, sel}, ch_writer});
             } 
         }
     }
 
     uint nentries = caf_tree->GetEntries();
-
     progressbar bar(nentries);
     bar.set_todo_char(" ");
     bar.set_done_char("█");
@@ -112,6 +126,7 @@ int main(int argc, char const *argv[])
     for(uint i = 0; i < nentries; i++){
         caf_tree->GetEntry(i);
         weights_tree->GetEntry(i);
+        genie_tree->GetEntry(i);
         bar.update();
 
         Flavour ofl = Flavour(sr->mc.nu[0].pdg);
@@ -139,11 +154,19 @@ int main(int argc, char const *argv[])
 
         SRWriter* channel_writer = channels[{ifls[0], ofl, sel}];
         sr->mc.nu[0].genweight = xsec_w*nuE_flux;
+        sr->mc.nu[0].imp_weight = osc_from_e_w;
+        sr->mc.nu[0].genieIdx = channel_writer->GetGenieTree()->GetEntries(); //Updating the genie index correctly
         channel_writer->Fill();
+        channel_writer->GetGenieTree()->Fill();
 
         channel_writer = channels[{ifls[1], ofl, sel}];
         sr->mc.nu[0].genweight = xsec_w*nuMu_flux;
+        sr->mc.nu[0].imp_weight = osc_from_mu_w;
+        sr->mc.nu[0].genieIdx = channel_writer->GetGenieTree()->GetEntries(); //Updating the genie index correctly
         channel_writer->Fill();
+        channel_writer->GetGenieTree()->Fill();
+
+        delete genie_record->event;
     }
 
     std::cout << std::endl;
@@ -153,7 +176,11 @@ int main(int argc, char const *argv[])
         // channel.second->AddTree(reader.GetGlobalTree());
         channel.second->Write();
         channel.second->WriteFile();
+        channel.second->GetFile()->Close();
+        channel.second->_file = nullptr;
     }
+
+    ifile->Close();
 
     return 0;
 }
