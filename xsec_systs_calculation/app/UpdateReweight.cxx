@@ -30,6 +30,8 @@
 #include "TObjString.h"
 #include "TChain.h"
 #include "TFile.h"
+#include "TGraph.h"
+#include "TSpline.h"
 // duneanaobj
 #include "duneanaobj/StandardRecord/Proxy/FwdDeclare.h"
 #include "duneanaobj/StandardRecord/Proxy/SRProxy.h"
@@ -117,7 +119,7 @@ int main(int argc, char const *argv[]) {
   f_input->GetObject("cafmaker/cafTree", t_input_caftree);
 
   if(!t_input_caftree){
-    std::cerr << "Could not find input tree cafmaker/cafTree" << std::endl;
+    std::cerr << "Could not find input tree cafTree" << std::endl;
     throw;
   }
   size_t NEvs = t_input_caftree->GetEntries();
@@ -185,7 +187,6 @@ int main(int argc, char const *argv[]) {
     systtools::SystParamHeader const &hdr = resp_helper.GetHeader(pid);
 
     srglobal.wgts.params.emplace_back();
-
     // Name
     srglobal.wgts.params.back().name = hdr.prettyName;
     // TODO better save paramVariations
@@ -256,6 +257,10 @@ int main(int argc, char const *argv[]) {
       }
       t_input_genie->GetEntry(genieIdx);
       genie::EventRecord const &GenieGHep = *GenieNtpl->event;
+
+      //DB: Force the assigned weight to be equal to exactly 1. so we renormalise the variation weight with respect to the flux weights
+      genie::EventRecord CopyGenieEventRecord(GenieGHep);
+      CopyGenieEventRecord.SetWeight(1.);
 
       // Evaluate reweights
       systtools::event_unit_response_w_cv_t resp = resp_helper.GetEventVariationAndCVResponse(CopyGenieEventRecord);
