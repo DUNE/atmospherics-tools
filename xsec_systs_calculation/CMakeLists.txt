@@ -26,7 +26,7 @@ endif()
 FetchContent_Declare(
 	nusystematics
 	GIT_REPOSITORY https://github.com/NuSystematics/nusystematics
-	GIT_TAG v02_00_02
+	GIT_TAG 0cd128b2a83146dbf802e9b1688f643f0936a040
 )
 FetchContent_MakeAvailable(nusystematics)
 
