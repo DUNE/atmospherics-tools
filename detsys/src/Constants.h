@@ -3,10 +3,11 @@
 #include <iostream>
 
 enum Sel{
-  SelNuE,
-  SelNuMu,
-  SelNC,
-  Unsel
+  SelNuE = 0,
+  SelNuMu = 1,
+  SelNC = 2,
+  Unsel = 3,
+  nSelections
 };
 
 const double _BAD_VALUE_ = -999;
@@ -19,6 +20,7 @@ enum KinematicParameters {
   kNuTrueCosZ,
   kCVNNuMu,
   kCVNNuE,
+  kSelection,
   nKinPars
 };
 
@@ -34,6 +36,9 @@ inline int Kinematic_StringToInt(std::string Str) {
   }
   if (Str == "kCVNNuE") {
     return kCVNNuE;
+  }
+  if (Str == "kSelection") {
+    return kSelection;
   }
 
   std::cerr << "Did not find std::string -> int mapping for string:" << Str << std::endl;

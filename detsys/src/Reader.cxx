@@ -138,6 +138,8 @@ const T Reader<T>::ReturnKinematicParameter(int Par) {
     return _data.cvn_numu;
   case kCVNNuE:
     return _data.cvn_nue;
+  case kSelection:
+    return _data.Selection;
   }
 
 

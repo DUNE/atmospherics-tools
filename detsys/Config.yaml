@@ -54,7 +54,17 @@ Observables:
         UpperBound: 0.6 #Upper bound of cut
       - Variable: "kNuTrueCosZ" #Can have multiple cuts per observable
         LowerBound: -0.5
-        UpperBound: 0.5 
+        UpperBound: 0.5
+
+  - Name: "Reco Cosine Zenith - NuMu"
+    Axes:
+      - Variable: "kNuRecoCosZ"
+        Label: "Reco Cosine Zenith"
+        Binning: [-1.0,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.0]
+    Cuts:
+      - Variable: "kSelection"
+        LowerBound: 0.5
+        UpperBound: 1.5
 
   - Name: "True Cosine Zenith"
     Axes:
@@ -73,3 +83,9 @@ Observables:
       - Variable: "kCVNNuE"
         Label: "CVN NuE"
         BinDefinition: [10,0.,1.]
+
+  - Name: "Selection"
+    Axes:
+      - Variable: "kSelection"
+        Label: "Selection"
+        BinDefinition: [4,-0.5,3.5]
