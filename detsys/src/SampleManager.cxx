@@ -24,6 +24,27 @@ void Sample<T>::ReadData() {
     SampleReader->GetEntry(i);
     
     for (size_t iMeas=0;iMeas<Measurements.size();iMeas++) {
+      bool PassesCut = true;
+
+      for (size_t iCut=0;iCut<Measurements[iMeas].Cuts.size();iCut++) {
+	int Variable = Measurements[iMeas].Cuts[iCut].Variable_Int;
+	T LowerBound = Measurements[iMeas].Cuts[iCut].LowerBound;
+	T UpperBound = Measurements[iMeas].Cuts[iCut].UpperBound;
+	T VariableValue = SampleReader->ReturnKinematicParameter(Variable);
+
+	if (VariableValue < LowerBound) {
+	  PassesCut = false;
+	  break;
+	}
+	if (VariableValue >= UpperBound) {
+	  PassesCut = false;
+          break;
+	}
+      }
+      if (!PassesCut) {
+	continue;
+      }
+
       T EventWeight = SampleReader->GetEventWeight();
 
       if (Measurements[iMeas].nDimensions == 1) {
@@ -64,6 +85,8 @@ void Sample<T>::SetObservables(ObservableManager<T>* ObsManager) {
       AVariables.push_back(ObsManager->GetObservable(iObs)->GetVariable(iAx));
     }
     Meas.AxisVariables = AVariables;
+
+    Meas.Cuts = ObsManager->GetObservable(iObs)->GetCuts();
 
     Measurements.push_back(Meas);
   }

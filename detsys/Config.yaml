@@ -48,6 +48,13 @@ Observables:
       - Variable: "kNuRecoCosZ"
         Label: "Reco Cosine Zenith"
         Binning: [-1.0,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.0]
+    Cuts: #Optional - Defines whether you want to apply any cuts on variables when making this observable distribution (can be the variable which is plotted or any other)
+      - Variable: "kNuRecoCosZ" #Variable which is being cut on
+        LowerBound: -0.6 #Lower bound of cut
+        UpperBound: 0.6 #Upper bound of cut
+      - Variable: "kNuTrueCosZ" #Can have multiple cuts per observable
+        LowerBound: -0.5
+        UpperBound: 0.5 
 
   - Name: "True Cosine Zenith"
     Axes:

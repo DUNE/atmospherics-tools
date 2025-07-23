@@ -11,6 +11,7 @@ template <typename T>
 struct Measurement {
   TH1* Histogram;
   int nDimensions;
+  std::vector< Cut<T> > Cuts;
   std::vector<int> AxisVariables;
 };
 

@@ -42,6 +42,21 @@ Observable<T>::Observable(YAML::Node ObservableConfig) {
     Axes.emplace_back(A);
   }
 
+  if (ObservableConfig["Cuts"]) {
+    
+    for (auto CutNode: ObservableConfig["Cuts"]) {
+      Cut<T> ObsCut = Cut<T>();
+      
+      ObsCut.Variable = CutNode["Variable"].as<std::string>();
+      ObsCut.Variable_Int = Kinematic_StringToInt(ObsCut.Variable);
+      ObsCut.LowerBound = CutNode["LowerBound"].as<T>();
+      ObsCut.UpperBound = CutNode["UpperBound"].as<T>();
+      
+      Cuts.push_back(ObsCut);
+    }
+
+  }
+  
   std::cout << "Observable:" << std::endl;
   std::cout << "\tName:" << Name << std::endl;
   std::cout << "\tnDimensions:" << nDimensions << std::endl;
@@ -55,6 +70,14 @@ Observable<T>::Observable(YAML::Node ObservableConfig) {
     std::cout << "\t\tBinning: [";
     for (auto BinEdge: Axes[i].Binning) {std::cout << BinEdge << ", ";}
     std::cout << "]" << std::endl;    
+  }
+
+  if (Cuts.size() > 0) {
+    std::cout << "\tCuts applied:" << std::endl;
+    for (size_t iCut=0;iCut<Cuts.size();iCut++) {
+      std::cout << "\t\tVariable: " << Cuts[iCut].Variable << "(" << Cuts[iCut].Variable_Int << ")" << std::endl;
+      std::cout << "\t\t\tBound: [" << Cuts[iCut].LowerBound << ", " << Cuts[iCut].UpperBound << ")" << std::endl;
+    }
   }
 
   if (nDimensions == 0) {

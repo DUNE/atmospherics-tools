@@ -5,6 +5,14 @@
 #include "TH2.h"
 
 template <typename T>
+struct Cut {
+  std::string Variable;
+  int Variable_Int;
+  T LowerBound;
+  T UpperBound;
+};
+
+template <typename T>
 struct Axis {
   std::string Variable;
   std::string Label;
@@ -18,12 +26,14 @@ class Observable {
   std::string Name;
   int nDimensions; 
   TH1* HistTemplate;
+  std::vector< Cut<T> > Cuts;
 
   std::vector<Axis<T>> Axes;
  public:
   Observable(YAML::Node Config);
 
   TH1* ReturnTemplateHistogram() {return HistTemplate;}
+  std::vector< Cut<T> > GetCuts() {return Cuts;}
   int GetVariable(int iAxis) {return (Axes.at(iAxis)).Variable_Int;}
   int GetNDimensions() {return nDimensions;}
 };
