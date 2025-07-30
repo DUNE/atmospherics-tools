@@ -8,6 +8,8 @@ FluxReader::FluxReader(YAML::Node Config_) {
   std::cout << std::endl;
   Config = Config_;
   ModelName = Config["ModelName"].as<std::string>();
+
+  std::cout << "\nInitialising Flux:" << ModelName << std::endl;
   
   EnergyBinEdges = Config["EnergyBinEdges"].as< std::vector<FLOAT_T> >();
   std::cout << "Energy Bin Edges:" << std::endl;
@@ -42,12 +44,23 @@ FluxReader::FluxReader(YAML::Node Config_) {
   } else {
     MeasDimension = 2;
   }
+
+  if (Config["Smooth"]) {
+    Smooth = Config["Smooth"].as<bool>();
+  }
+  if (Smooth) {std::cout << "Warning!: Smoothing 2D distribution\n" << std::endl;}
+
+  EnergyAxisMin = Config["EnergyAxisMin"].as<FLOAT_T>();
+  EnergyAxisMax = Config["EnergyAxisMax"].as<FLOAT_T>();
+  LineColor = Config["LineColor"].as<int>();
+  LineStyle = Config["LineStyle"].as<int>();
+  
+  FluxCaption = Config["FluxCaption"].as<std::string>();
+  std::string HistAxisCaptions = Config["HistAxisCaptions"].as<std::string>();
   
   for (int iFlav=0;iFlav<nFlavours;iFlav++) {
-    std::string HistName = ModelName+"_"+FlavourNames[iFlav];
-    std::string HistCaptions = Config["HistCaptions"].as<std::string>();
-    
-    std::string HistTitle = FlavourNames[iFlav]+";"+HistCaptions;
+    std::string HistName = ModelName+"_"+FlavourNames[iFlav];    
+    std::string HistTitle = FlavourNames[iFlav]+";"+HistAxisCaptions;
 
     if (MeasDimension == 2) {
       FluxHists[iFlav] = new TH2D(HistName.c_str(),HistTitle.c_str(),EnergyBinEdges.size()-1,EnergyBinEdges.data(),CosineZBinEdges.size()-1,CosineZBinEdges.data());
@@ -81,6 +94,8 @@ void FluxReader::InitialiseFlux() {
     for (size_t iP=0;iP<FluxPoints[iFlav].size();iP++) {
       if (static_cast<int>(FluxPoints[iFlav][iP].size()) != MeasDimension+1) {
 	std::cerr << "Found a point with a different number of dimensions!" << std::endl;
+	std::cerr << "FluxPoints[iFlav][iP].size():" << FluxPoints[iFlav][iP].size() << std::endl;
+	std::cerr << "MeasDimension+1:" << MeasDimension+1 << std::endl;
 	throw;
       }
     }
@@ -125,7 +140,40 @@ void FluxReader::InitialiseFlux() {
     }
   }
 
+  Build2DPlots();
   std::cout << std::endl;
+}
+
+void FluxReader::Build2DPlots() {
+  if (MeasDimension == 2) {
+    for (int iFlav=0;iFlav<nFlavours;iFlav++) {
+      EnergyCosineZHists[iFlav] = (TH1*)(FluxHists[iFlav]->Clone());
+      if (Smooth) {
+	EnergyCosineZHists[iFlav]->Smooth();
+      }
+    }
+  } else if (MeasDimension == 3) {
+    for (int iFlav=0;iFlav<nFlavours;iFlav++) {
+      EnergyCosineZHists[iFlav] = ((TH3*)FluxHists[iFlav])->Project3D("yx");
+
+      FLOAT_T Max = -1;
+      for (int xBin=1;xBin<=FluxHists[iFlav]->GetNbinsX();xBin++) {
+        for (int yBin=1;yBin<=FluxHists[iFlav]->GetNbinsY();yBin++) {
+          FLOAT_T BinContent = 0.;
+          for (int zBin=1;zBin<=FluxHists[iFlav]->GetNbinsZ();zBin++) {
+            BinContent += FluxHists[iFlav]->GetBinContent(xBin,yBin,zBin);
+          }
+          BinContent /= FluxHists[iFlav]->GetNbinsZ();
+          if (BinContent > Max) {Max = BinContent;}
+          EnergyCosineZHists[iFlav]->SetBinContent(xBin,yBin,BinContent);
+        }
+      }
+      if (Smooth) {
+        EnergyCosineZHists[iFlav]->Smooth();
+      }
+      EnergyCosineZHists[iFlav]->GetZaxis()->SetRangeUser(0,Max);
+    }
+  }
 }
 
 void FluxReader::Plot2DFlux(std::string OutputName, std::string DrawOpts) {
@@ -135,33 +183,16 @@ void FluxReader::Plot2DFlux(std::string OutputName, std::string DrawOpts) {
   Canv->SetRightMargin(0.2);
   Canv->Print((OutputName+"[").c_str());
 
-  if (MeasDimension == 2) {
-    for (int iFlav=0;iFlav<nFlavours;iFlav++) {
-      FluxHists[iFlav]->Draw(DrawOpts.c_str());
-      Canv->Print(OutputName.c_str());
-    }
-  } else if (MeasDimension == 3) {
-    for (int iFlav=0;iFlav<nFlavours;iFlav++) {
-      TH1* Hist2D = ((TH3*)FluxHists[iFlav])->Project3D("yx");
-
-      FLOAT_T Max = -1;
-
-      for (int xBin=1;xBin<=FluxHists[iFlav]->GetNbinsX();xBin++) {
-	for (int yBin=1;yBin<=FluxHists[iFlav]->GetNbinsY();yBin++) {
-	  FLOAT_T BinContent = 0.;
-	  for (int zBin=1;zBin<=FluxHists[iFlav]->GetNbinsZ();zBin++) {
-	    BinContent += FluxHists[iFlav]->GetBinContent(xBin,yBin,zBin);
-	  }
-	  BinContent /= FluxHists[iFlav]->GetNbinsZ();
-	  if (BinContent > Max) {Max = BinContent;}
-	  Hist2D->SetBinContent(xBin,yBin,BinContent);
-	}
-      }
-      
-      Hist2D->GetZaxis()->SetRangeUser(0,Max);
-      Hist2D->Draw(DrawOpts.c_str());
-      Canv->Print(OutputName.c_str());
-    }
+  for (int iFlav=0;iFlav<nFlavours;iFlav++) {
+    EnergyCosineZHists[iFlav]->SetTitle(FluxHists[iFlav]->GetTitle());
+    EnergyCosineZHists[iFlav]->SetStats(false);      
+    EnergyCosineZHists[iFlav]->GetZaxis()->SetTitle(FluxCaption.c_str());
+    EnergyCosineZHists[iFlav]->GetXaxis()->SetRangeUser(EnergyAxisMin,EnergyAxisMax);
+    EnergyCosineZHists[iFlav]->Draw(DrawOpts.c_str());
+    EnergyCosineZHists[iFlav]->SetLineColor(LineColor);
+    EnergyCosineZHists[iFlav]->SetLineStyle(LineStyle);
+    
+    Canv->Print(OutputName.c_str());
   }
   
   Canv->Print((OutputName+"]").c_str());
