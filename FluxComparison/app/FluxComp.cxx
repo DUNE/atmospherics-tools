@@ -7,6 +7,9 @@
 #include "TStyle.h"
 #include "TLegend.h"
 #include "TLatex.h"
+#include "TH1.h"
+#include "TF1.h"
+#include "TFile.h"
 
 TH2D* InterpolateHistogram(TH2* ModelHistogram, std::vector<double> EnergyBinning, std::vector<double> CosineZBinning, std::string HistName="") {
   if (HistName == "") {
@@ -32,6 +35,140 @@ TH2D* InterpolateHistogram(TH2* ModelHistogram, std::vector<double> EnergyBinnin
   return InterpHistogram;
 }
 
+// fit polynomial to absolute envelope
+// This function fits a polynomial to the absolute envelope of the ratios of alternative flux models to the nominal model.
+// It takes the absolute deviation histogram, fits a polynomial to it, and saves the fit
+
+//it is called inside the function below PlotEnvelope
+void FitAbsoluteEnvelope(TH1* hAbsDev, const std::string& outName, const std::string& xLabel)
+{
+  TF1* fitFunc = new TF1("fitFunc", "pol2", hAbsDev->GetXaxis()->GetXmin(), hAbsDev->GetXaxis()->GetXmax());
+  hAbsDev->Fit(fitFunc, "R");
+
+  TCanvas* c = new TCanvas("c", "Fit", 800, 600);
+  hAbsDev->SetLineColor(kMagenta + 2);
+  hAbsDev->SetTitle(("Fit to Absolute Envelope vs " + xLabel).c_str());
+  hAbsDev->GetXaxis()->SetTitle(xLabel.c_str());
+  hAbsDev->GetYaxis()->SetTitle("Max |Model/Nominal - 1|");
+  hAbsDev->Draw("hist");
+  fitFunc->SetLineColor(kGreen + 2);
+  fitFunc->Draw("same");
+
+  c->SaveAs((outName + "_absdev_fit.pdf").c_str());
+
+  // Optional: write to file
+  TFile* fout = new TFile((outName + "_fit.root").c_str(), "RECREATE");
+  fitFunc->Write("AbsDevPolyFit");
+  fout->Close();
+
+  delete c;
+}
+
+//This function plots the envelope of the ratios of alternative flux models to the nominal model for a given flavor
+//It takes the nominal histogram and a vector of alternative histograms, and plots the maximum and minimum ratios
+//as a function of energy and cosine theta. The envelope is plotted as two histograms, one for the maximum ratio and one for the minimum ratio.
+//The function is called for each flavor and dimension (energy and cosine theta).
+void PlotEnvelope(int iFlav,
+                  const std::string& flavLabel,
+                  const TH2* hNominal,
+                  const std::vector<TH2*>& altHists,
+                  TCanvas* canvas,
+                  const std::string& outPrefix)
+{
+  for (int iDim = 0; iDim < 2; ++iDim) {
+    // Nominal projection
+    TH1* hNomProj = (iDim == 0) ? hNominal->ProjectionX() : hNominal->ProjectionY();
+    hNomProj->SetDirectory(nullptr);
+
+    const int nBins = hNomProj->GetNbinsX();
+
+    // Prepare ratio envelopes
+    TH1* hMaxRatio = (TH1*)hNomProj->Clone("hMaxRatio");
+    TH1* hMinRatio = (TH1*)hNomProj->Clone("hMinRatio");
+    TH1* hAbsDev   = (TH1*)hNomProj->Clone("hAbsDev");
+
+    hMaxRatio->Reset();
+    hMinRatio->Reset();
+    hAbsDev->Reset();
+
+    for (int ibin = 1; ibin <= nBins; ++ibin) {
+      const double nomVal = hNomProj->GetBinContent(ibin);
+      if (nomVal <= 0) {
+        hMaxRatio->SetBinContent(ibin, 1.0);
+        hMinRatio->SetBinContent(ibin, 1.0);
+        hAbsDev->SetBinContent(ibin, 0.0);
+        continue;
+      }
+
+      double maxRatio = -1e9;
+      double minRatio = +1e9;
+      double maxAbsDev = 0.0;
+
+      for (const auto& hAlt2D : altHists) {
+        TH1* hAltProj = (iDim == 0) ? hAlt2D->ProjectionX() : hAlt2D->ProjectionY();
+        hAltProj->SetDirectory(nullptr);
+
+        const double altVal = hAltProj->GetBinContent(ibin);
+        const double ratio = altVal / nomVal;
+        const double absDev = std::abs(ratio - 1.0);
+
+        if (ratio > maxRatio) maxRatio = ratio;
+        if (ratio < minRatio) minRatio = ratio;
+        if (absDev > maxAbsDev) maxAbsDev = absDev;
+
+        delete hAltProj;
+      }
+
+      hMaxRatio->SetBinContent(ibin, maxRatio);
+      hMinRatio->SetBinContent(ibin, minRatio);
+      hAbsDev->SetBinContent(ibin, 1.0 + maxAbsDev); // draw on same scale
+    }
+
+    // Draw envelope
+    canvas->Clear();
+    hMaxRatio->SetLineColor(kRed);
+    hMinRatio->SetLineColor(kBlue);
+    hAbsDev->SetLineColor(kMagenta);
+    hMaxRatio->SetLineWidth(2);
+    hMinRatio->SetLineWidth(2);
+    hAbsDev->SetLineWidth(2);
+
+    hMaxRatio->SetTitle(Form("Envelope for %s vs %s", flavLabel.c_str(), iDim == 0 ? "E" : "cos(#theta)"));
+    hMaxRatio->GetYaxis()->SetTitle("Model / Nominal");
+    hMaxRatio->GetXaxis()->SetTitle(iDim == 0 ? "Energy (GeV)" : "cos(#theta)");
+    hMaxRatio->GetYaxis()->SetRangeUser(0.5, 1.5);
+
+    hMaxRatio->Draw("hist");
+    hMinRatio->Draw("hist same");
+    hAbsDev->Draw("hist same");
+
+    TLegend* leg = new TLegend(0.15, 0.75, 0.5, 0.9);
+    leg->AddEntry(hMaxRatio, "Max(Model/Nominal)", "l");
+    leg->AddEntry(hMinRatio, "Min(Model/Nominal)", "l");
+    leg->AddEntry(hAbsDev,   "Max|Model/Nominal - 1|", "l");
+    leg->Draw();
+
+    canvas->SaveAs((outPrefix + Form("_%s_env_%s.pdf", flavLabel.c_str(), iDim == 0 ? "E" : "cos")).c_str());
+
+
+    // Fit polynomial to absolute envelope, calling the function FitAbsoluteEnvelope
+    // This function fits a polynomial to the absolute envelope of the ratios of alternative flux models to the nominal model.
+    // It takes the absolute deviation histogram, fits a polynomial to it, and saves the fit
+    std::string xLabel = (iDim == 0) ? "Energy (GeV)" : "cos(#theta)";
+    std::string outName = outPrefix + Form("_%s_env_%s", flavLabel.c_str(), iDim == 0 ? "E" : "cos");
+    FitAbsoluteEnvelope(hAbsDev, outName, xLabel);
+
+
+
+    // Clean up
+    delete hMaxRatio;
+    delete hMinRatio;
+    delete hAbsDev;
+    delete hNomProj;
+  }
+}
+
+
 int main(int argc, char const *argv[]) {
   gStyle->SetOptStat(false);
   
@@ -56,6 +193,7 @@ int main(int argc, char const *argv[]) {
   }
   std::vector< std::string > ModelsFound;
 
+  // Reads which model to use as the reference/nominal
   std::string NominalFluxModel = Config["General"]["Nominal"].as<std::string>();
   bool  FoundNominalModel = false;
   for (auto const &Model : Config["FluxModels"]) {
@@ -70,14 +208,15 @@ int main(int argc, char const *argv[]) {
     std::cerr << "Did not find the nominal model in the defined FluxModels!: " << NominalFluxModel << std::endl;
     throw;
   }
-
+  
+  // Reads the common interpolation binning for comparison
   std::vector<double> ComparisonBinning_Energy = Config["General"]["ComparisonBinning_Energy"].as< std::vector<double> >();
   std::vector<double> ComparisonBinning_CosineZ = Config["General"]["ComparisonBinning_CosineZ"].as< std::vector<double> >();
 
   //================================================================================
   //Build the flux predictions
   
-  std::vector<FluxReader*> Fluxes;
+  std::vector<FluxReader*> Fluxes; //iterate through flux models in FluxModels
   for (auto const &Model : Config["FluxModels"]) {
 
     std::string ModelName = Model["ModelName"].as<std::string>();
@@ -86,7 +225,8 @@ int main(int argc, char const *argv[]) {
       throw;
     }
     
-    if (ModelName == "BARTOLSolMin" || ModelName == "BARTOLSolMax") {
+    //Bartol flux reader and honda flux reader are different. Honda reads single table file while bartol reads separate file per flavor
+    if (ModelName == "BARTOLSolMin" || ModelName == "BARTOLSolMax") { 
       FluxReader* BARTOL = new BartolFluxReader(Model);
       Fluxes.push_back(BARTOL);
     } else if (ModelName == "HONDASolMin" || ModelName == "BARTOL25SolMin" || ModelName == "HONDASolMax" || ModelName == "BARTOL25SolMax") {
@@ -128,7 +268,15 @@ int main(int argc, char const *argv[]) {
   
   Canv->Print((InterpOutputName+"[").c_str());
   std::vector< std::vector<TH2*> > AlternativeFluxHists(nFlavs);
-  for (int iFlav=0;iFlav<nFlavs;iFlav++) {
+
+  // loop over all flavors and flux models; interpolate 2D flux hist to common binning
+  // store interpolated hist in nested vector AlternativeFluxHists[iFlav][iModel]
+  // draw each interpolated hist and save to file
+  // then draw ratio plots for each flavor and each dimension (x and y) of the flux histograms
+  // ratio plots are drawn for each model compared to the nominal model
+  // save ratio plots to file
+  // finally, print the canvas with all the ratio plots
+  for (int iFlav=0;iFlav<nFlavs;iFlav++) { 
     AlternativeFluxHists[iFlav].resize(Fluxes.size());
     for (size_t iModel=0;iModel<Fluxes.size();iModel++) {
       AlternativeFluxHists[iFlav][iModel] = InterpolateHistogram((TH2*)(Fluxes[iModel]->ReturnEnergyCosineZHists())[iFlav], ComparisonBinning_Energy, ComparisonBinning_CosineZ);
@@ -151,9 +299,9 @@ int main(int argc, char const *argv[]) {
   for (int iFlav=0;iFlav<nFlavs;iFlav++) {
     for (size_t iDim=0;iDim<2;iDim++) {
       if (iDim==0) {
-	Canv->SetLogx(true);
+	Canv->SetLogx(true); // project along energy axis -> flux vs energy
       } else {
-	Canv->SetLogx(false);
+	Canv->SetLogx(false); // project along cosinetheta axis -> flux vs cosinetheta
       }
 
       for (size_t iModel=0;iModel<Fluxes.size();iModel++) {
@@ -163,14 +311,16 @@ int main(int argc, char const *argv[]) {
 	TH1* NominalModelFluxHist_Proj;
 	TH1* AlternativeModelFluxHist_Proj;
 
-	if (iDim==0) {
+  // previously initializing the histograms
+  // but now we will project them directly from the 2D histograms
+	if (iDim==0) { // project along energy axis -> flux vs energy
 	  NominalModelFluxHist_Proj = (TH1*)NominalModelFluxHist->ProjectionX();
 	  AlternativeModelFluxHist_Proj = (TH1*)AlternativeModelFluxHist->ProjectionX();
 
 	  AlternativeModelFluxHist_Proj->GetXaxis()->SetTitle(AlternativeModelFluxHist->GetXaxis()->GetTitle());
-	} else {
+	} else { // project along cosinetheta axis -> flux vs cosinetheta
 	  NominalModelFluxHist_Proj = (TH1*)NominalModelFluxHist->ProjectionY();
-          AlternativeModelFluxHist_Proj = (TH1*)AlternativeModelFluxHist->ProjectionY();
+    AlternativeModelFluxHist_Proj = (TH1*)AlternativeModelFluxHist->ProjectionY();
 
 	  AlternativeModelFluxHist_Proj->GetXaxis()->SetTitle(AlternativeModelFluxHist->GetYaxis()->GetTitle());
 	}
@@ -199,6 +349,16 @@ int main(int argc, char const *argv[]) {
   }
 
   Canv->Print((RatioOutputName+"]").c_str());
+
+// Plot the envelope of the ratios for each flavor
+for (int iFlav = 0; iFlav < nFlavs; ++iFlav) {
+PlotEnvelope(iFlav,
+              Fluxes[0]->GetFlavourName(iFlav),
+              NominalModelFluxHists[iFlav],
+              AlternativeFluxHists[iFlav],
+              Canv,
+              "EnvelopePlot");
+}
   
   return 0;
 }
