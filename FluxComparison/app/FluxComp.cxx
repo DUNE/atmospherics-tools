@@ -11,6 +11,9 @@
 #include "TF1.h"
 #include "TFile.h"
 
+#include "TSpline.h"
+#include "TGraph.h"
+
 TH2D* InterpolateHistogram(TH2* ModelHistogram, std::vector<double> EnergyBinning, std::vector<double> CosineZBinning, std::string HistName="") {
   if (HistName == "") {
     HistName = ModelHistogram->GetName();
@@ -40,9 +43,11 @@ TH2D* InterpolateHistogram(TH2* ModelHistogram, std::vector<double> EnergyBinnin
 // It takes the absolute deviation histogram, fits a polynomial to it, and saves the fit
 
 //it is called inside the function below PlotEnvelope
+
+/*
 void FitAbsoluteEnvelope(TH1* hAbsDev, const std::string& outName, const std::string& xLabel)
 {
-  TF1* fitFunc = new TF1("fitFunc", "pol2", hAbsDev->GetXaxis()->GetXmin(), hAbsDev->GetXaxis()->GetXmax());
+  TF1* fitFunc = new TF1("fitFunc", "pol3", hAbsDev->GetXaxis()->GetXmin(), hAbsDev->GetXaxis()->GetXmax());
   hAbsDev->Fit(fitFunc, "R");
 
   TCanvas* c = new TCanvas("c", "Fit", 800, 600);
@@ -59,6 +64,49 @@ void FitAbsoluteEnvelope(TH1* hAbsDev, const std::string& outName, const std::st
   // Optional: write to file
   TFile* fout = new TFile((outName + "_fit.root").c_str(), "RECREATE");
   fitFunc->Write("AbsDevPolyFit");
+  fout->Close();
+
+  delete c;
+}
+*/
+
+// This function fits a spline to the absolute envelope of the ratios of alternative flux models to the nominal model.
+void FitAbsoluteEnvelope(TH1* hAbsDev, const std::string& outName, const std::string& xLabel)
+{
+  // Convert histogram to TGraph
+  const int n = hAbsDev->GetNbinsX();
+  std::vector<double> x, y;
+
+  for (int i = 1; i <= n; ++i) {
+    double binContent = hAbsDev->GetBinContent(i);
+    if (binContent > 0) {  // Skip empty bins to avoid spline issues
+      x.push_back(hAbsDev->GetBinCenter(i));
+      y.push_back(binContent);
+    }
+  }
+
+  TGraph* gr = new TGraph(x.size(), x.data(), y.data());
+
+  // Create the spline from TGraph
+  TSpline3* spline = new TSpline3("spline", gr);
+
+  // Plotting
+  TCanvas* c = new TCanvas("c", "Fit", 800, 600);
+  hAbsDev->SetLineColor(kMagenta + 2);
+  hAbsDev->SetTitle(("Spline Fit to Absolute Envelope vs " + xLabel).c_str());
+  hAbsDev->GetXaxis()->SetTitle(xLabel.c_str());
+  hAbsDev->GetYaxis()->SetTitle("Max |Model/Nominal - 1|");
+  hAbsDev->Draw("hist");
+
+  spline->SetLineColor(kGreen + 2);
+  spline->SetLineWidth(2);
+  spline->Draw("same");
+
+  c->SaveAs((outName + "_absdev_spline.pdf").c_str());
+
+  // Save the spline to file
+  TFile* fout = new TFile((outName + "_spline.root").c_str(), "RECREATE");
+  spline->Write("AbsDevSplineFit");
   fout->Close();
 
   delete c;
@@ -198,16 +246,36 @@ int main(int argc, char const *argv[]) {
   bool  FoundNominalModel = false;
   for (auto const &Model : Config["FluxModels"]) {
     std::string ModelName = Model["ModelName"].as<std::string>();
+    // if (ModelName.find("SolMax") == std::string::npos) continue; // Skip models that are not solar min/max
     std::cout << NominalFluxModel << " " << ModelName << std::endl;
     if (NominalFluxModel == ModelName) {
       FoundNominalModel = true;
       break;
     }
   }
+
+  // Step 1: Check if the nominal model exists — check all models!
+  for (auto const &Model : Config["FluxModels"]) {
+      std::string modelName = Model["ModelName"].as<std::string>();
+      if (NominalFluxModel == modelName) {
+          FoundNominalModel = true;
+          break;
+      }
+  }
+
   if (!FoundNominalModel) {
     std::cerr << "Did not find the nominal model in the defined FluxModels!: " << NominalFluxModel << std::endl;
     throw;
   }
+
+  // // Step 2: Loop again, now filter for SolMin
+  // for (auto const &Model : Config["FluxModels"]) {
+  //     std::string modelName = Model["ModelName"].as<std::string>();
+  //     if (modelName.find("SolMax") == std::string::npos) continue;
+  //     std::cout << "Calculating deviation for: " << modelName << std::endl; // debugging output
+
+  //     // Now process SolMax models
+  // }
   
   // Reads the common interpolation binning for comparison
   std::vector<double> ComparisonBinning_Energy = Config["General"]["ComparisonBinning_Energy"].as< std::vector<double> >();
