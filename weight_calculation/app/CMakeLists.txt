@@ -19,7 +19,7 @@ endif(ROOT_FOUND)
 
 add_executable(weightor weightor.cxx)
 target_link_libraries(weightor
-  LINK_PUBLIC WeightorIO ROOT::EG ${ROOT_LIBRARIES} OscLib argparse)
+	LINK_PUBLIC WeightorIO ROOT::EG ${ROOT_LIBRARIES} OscLib argparse GENIE3::All)
 target_compile_features(weightor PRIVATE cxx_std_17)
 
 target_include_directories(weightor
