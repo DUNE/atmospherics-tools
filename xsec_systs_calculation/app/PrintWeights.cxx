@@ -39,8 +39,6 @@
 #include "duneanaobj/StandardRecord/SRGlobal.h"
 #include "duneanaobj/StandardRecord/Flat/FlatRecord.h"
 
-#include "progressbar.hpp"
-
 namespace cliopts {
   std::string fclname = "";
   std::string input_filename = "";
@@ -149,39 +147,12 @@ int main(int argc, char const *argv[]) {
   // Proxy
   caf::StandardRecordProxy* srproxy = new caf::StandardRecordProxy(t_input_caftree, "rec");
 
-  // Output file
-  TFile *f_output = new TFile(cliopts::output_filename.c_str(), "RECREATE");
-  TTree * srglobal_tree = new TTree("SRGlobal", "SRGlobal");
-  TTree * syst_weights_tree = new TTree("SystWeights", "SystWeights");
-  Int_t eid, subrun, run;
-  Float_t Ecalo, Elep_calo, Emu_range, Emu_mcs, Ee_calo;
-  Float_t Pmu_x, Pmu_y, Pmu_z, Pe_x, Pe_y, Pe_z;
-  syst_weights_tree->Branch("EventID", &eid);
-  syst_weights_tree->Branch("SubRun", &subrun);
-  syst_weights_tree->Branch("Run", &run);
-  syst_weights_tree->Branch("Ecalo", &Ecalo);
-  syst_weights_tree->Branch("Elep_calo", &Elep_calo);
-  syst_weights_tree->Branch("Emu_range", &Emu_range);
-  syst_weights_tree->Branch("Emu_mcs", &Emu_mcs);
-  syst_weights_tree->Branch("Ee_calo", &Ee_calo);
-  syst_weights_tree->Branch("Pmu_x", &Pmu_x);
-  syst_weights_tree->Branch("Pmu_y", &Pmu_y);
-  syst_weights_tree->Branch("Pmu_z", &Pmu_z);
-  syst_weights_tree->Branch("Pe_x", &Pe_x);
-  syst_weights_tree->Branch("Pe_y", &Pe_y);
-  syst_weights_tree->Branch("Pe_z", &Pe_z);
-
   // nusyst response_helper
   nusyst::response_helper resp_helper(cliopts::fclname);
 
   // SRGlobal
   caf::SRGlobal srglobal = caf::SRGlobal();
   srglobal.wgts.params.clear();
-  
-  srglobal_tree->Branch("SRGlobal", &srglobal);
-
-  std::map<int, Double_t*> sys_weights;
-
   printf("@@ Writting Header\n");
   for(systtools::paramId_t pid : resp_helper.GetParameters()) {
     systtools::SystParamHeader const &hdr = resp_helper.GetHeader(pid);
@@ -197,55 +168,21 @@ int main(int argc, char const *argv[]) {
     }
     // ParamID
     srglobal.wgts.params.back().id = pid;
-    sys_weights[pid] = new Double_t[srglobal.wgts.params.back().nshifts];
-    std::fill_n(sys_weights[pid], srglobal.wgts.params.back().nshifts, 1.0);
-    syst_weights_tree->Branch(hdr.prettyName.c_str(), sys_weights[pid], Form("%s[%d]/D", hdr.prettyName.c_str(), srglobal.wgts.params.back().nshifts));
   }
   printf("@@ Printing SRGlobal\n");
   for(const auto& sp:srglobal.wgts.params){
     printf("- (id, name, nshifts) = (%d, %s, %d)\n", sp.id, sp.name.c_str(), sp.nshifts);
   }
 
-
-  srglobal_tree->Fill();
-  srglobal_tree->Write("SRGlobal");
-
-  progressbar bar(NToRead);
-  bar.set_todo_char(" ");
-  bar.set_done_char("█");
-
   // Loop over CAFTree
   for (size_t cafev_it = cliopts::NSkip; cafev_it < NToRead; ++cafev_it) {
 
     t_input_caftree->GetEntry(cafev_it);
-    bar.update();
-
-    eid = srproxy->meta.fd_hd.event;
-    subrun = srproxy->meta.fd_hd.subrun;
-    run = srproxy->meta.fd_hd.run;
-
-    Pmu_x = Pmu_y = Pmu_z = Pe_x = Pe_y = Pe_z = Ecalo = Elep_calo = Emu_range = Emu_mcs = Ee_calo = -999.;
-
-    if(srproxy->common.ixn.pandora.size() > 0){
-      Pmu_x = srproxy->common.ixn.pandora[0].dir.lngtrk.x;
-      Pmu_y = srproxy->common.ixn.pandora[0].dir.lngtrk.y;
-      Pmu_z = srproxy->common.ixn.pandora[0].dir.lngtrk.z;
-      Pe_x = srproxy->common.ixn.pandora[0].dir.heshw.x;
-      Pe_y = srproxy->common.ixn.pandora[0].dir.heshw.y;
-      Pe_z = srproxy->common.ixn.pandora[0].dir.heshw.z;
-      Ecalo = srproxy->common.ixn.pandora[0].Enu.calo;
-      Elep_calo = srproxy->common.ixn.pandora[0].Enu.lep_calo;
-      Emu_range = srproxy->common.ixn.pandora[0].Enu.mu_range;
-      Emu_mcs = srproxy->common.ixn.pandora[0].Enu.mu_mcs;
-      Ee_calo = srproxy->common.ixn.pandora[0].Enu.e_calo;
-    }
-      
 
     size_t N_MC = srproxy->mc.nu.size();
     for(size_t i_nu=0; i_nu<N_MC; i_nu++){
       auto& nu = srproxy->mc.nu[i_nu];
       auto mode = nu.mode;
-      // size_t genieIdx = nu.genieIdx;
       // size_t genieIdx = nu.genieIdx; //DOES NOT WORK ON MERGED FILES!!!
       size_t genieIdx = cafev_it;
 
@@ -259,12 +196,11 @@ int main(int argc, char const *argv[]) {
       genie::EventRecord const &GenieGHep = *GenieNtpl->event;
 
       //DB: Force the assigned weight to be equal to exactly 1. so we renormalise the variation weight with respect to the flux weights
-      genie::EventRecord CopyGenieEventRecord(GenieGHep);
-      CopyGenieEventRecord.SetWeight(1.);
+      //genie::EventRecord CopyGenieEventRecord(GenieGHep);
+      //CopyGenieEventRecord.SetWeight(1.);
 
       // Evaluate reweights
-      systtools::event_unit_response_w_cv_t resp = resp_helper.GetEventVariationAndCVResponse(CopyGenieEventRecord);
-
+      systtools::event_unit_response_w_cv_t resp = resp_helper.GetEventVariationAndCVResponse(GenieGHep);
       delete GenieNtpl->event;
 
       for(const auto& v: resp){
@@ -275,31 +211,19 @@ int main(int argc, char const *argv[]) {
         const double& CVw = v.CV_response;
         const std::vector<double>& ws = v.responses;
 
-        size_t nPoints = ws.size();
-
-        if (nPoints != hdr.paramVariations.size()) {
-	  std::cout << "nPoints:" << nPoints << std::endl;
-	  std::cout << "hdr.paramVariations.size():" << hdr.paramVariations.size() << std::endl;
-          throw;
-        }
-        for (int iP=0;iP<nPoints;iP++) {
-          sys_weights[pid][iP] = ws[iP];
-        }
-
-        // std::cout << "- EventID:" << cafev_it << ", Mode: " << mode << ", ParamID:" << pid << ": RW values = {";
-        // if (!ws.empty()) {
-        //   std::cout << sys_weights[pid][0];
-        //   for (size_t i = 1; i < nPoints; ++i) {
-        //     std::cout << ", " << sys_weights[pid][i];
-        //   }
-        // }
-        // std::cout << "}" << std::endl;
+	// std::cout << "- EventID:" << cafev_it << ", Mode: " << mode << ", ParamID:" << pid << ": RW values = {";
+  //       if (!ws.empty()) {
+	//   std::cout << ws[0];
+  //         for (size_t i = 1; i < ws.size(); ++i) {
+	//     std::cout << ", " << ws[i];
+  //         }
+  //       }
+	// std::cout << "}" << std::endl;
 
       } // END resp loop
 
       // UPDATE RECORD HERE
       // E.g., sr->mc.nu[i_nu].E = <updated value>
-      syst_weights_tree->Fill();
 
     } // END nu loop
 
@@ -308,29 +232,6 @@ int main(int argc, char const *argv[]) {
 
   // Finalize output
 
-  std::cout << "@@ Cloning genie tree" << std::endl;
-  f_output->cd();
-
-  //Cannot use CloneTree because ROOT won't free the memory correctly...
-  // t_input_genie->CloneTree(NToRead, "fast")->Write("genieEvt");
-  TTree *t_output_genie = t_input_genie->CloneTree(0);
-  t_output_genie->SetDirectory(f_output);
-  for (size_t i = 0; i < NToRead; ++i) {
-    t_input_genie->GetEntry(i);
-    t_output_genie->Fill();
-    delete GenieNtpl->event;
-  }
-  t_output_genie->Write("genieEvt");
-
   std::cout << "@@ Closing input" << std::endl;
   f_input->Close();
-
-  std::cout << "@@ Closing output" << std::endl;
-  syst_weights_tree->Write("SystWeights");
-  f_output->Close();
-
-  std::cout << "@@ Memory cleanup" << std::endl;
-  for(auto& sw: sys_weights){
-    delete[] sw.second;
-  }
 }
