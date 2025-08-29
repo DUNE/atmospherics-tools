@@ -4,6 +4,8 @@ project(FastFeedback)
 include(ExternalProject)
 
 set(OSCPROB_SOURCE_DIR ${CMAKE_BINARY_DIR}/oscprob-src)
+#Set CMAKE_SHARED_LIBRARY_SUFFIX to .so
+set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
 
 ExternalProject_Add(OscProb
     DOWNLOAD_DIR ${CMAKE_CURRENT_BINARY_DIR}
@@ -19,7 +21,7 @@ message(STATUS "Source dir -> ${OSCPROB_SOURCE_DIR}")
 
 find_package(ROOT REQUIRED COMPONENTS RIO Net)
 
-add_library(OscProbLib STATIC IMPORTED GLOBAL)
+add_library(OscProbLib SHARED IMPORTED GLOBAL)
 set_property(TARGET OscProbLib 
     PROPERTY IMPORTED_LOCATION 
     ${OSCPROB_SOURCE_DIR}/lib/libOscProb.so
@@ -28,4 +30,4 @@ set_property(TARGET OscProbLib
 set(OSCPROB_INCLUDE_DIR ${OSCPROB_SOURCE_DIR}/inc/)
 
 add_subdirectory(src)
-target_link_libraries(Oscillogram PRIVATE OscProbLib)
+add_dependencies(Oscillogram OscProb)
