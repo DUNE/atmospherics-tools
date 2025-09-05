@@ -27,6 +27,8 @@ set_property(TARGET OscProbLib
     ${OSCPROB_SOURCE_DIR}/lib/libOscProb.so
 )
 
+find_package(OpenMP REQUIRED)
+
 set(OSCPROB_INCLUDE_DIR ${OSCPROB_SOURCE_DIR}/inc/)
 
 add_subdirectory(src)

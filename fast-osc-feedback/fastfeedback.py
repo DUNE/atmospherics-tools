@@ -9,6 +9,7 @@ import itertools
 import os
 import sparse
 import polars as pl
+from iminuit import Minuit
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 lib_oscprob = dir_path + '/build/oscprob-src/lib/libOscProb.so'
@@ -101,7 +102,7 @@ def fix_empty_arrays(data):
     Returns:
         ak.Array: An array with empty lists replaced by the specified value.
     """
-    return ak.Array([replace_empty_list(x, -999) for x in data])
+    return ak.where(ak.num(data) == 0, ak.Array([[-999]] * len(data)), data)
 
 
 class DataManager:
@@ -128,14 +129,48 @@ class DataManager:
 
     """
 
+    def default_data_selection(self):
+        return (pl.col('cvn_numu') > 0) & (pl.col('cvn_numu') > 0) & (pl.col('recoE_numu') > 0) & (pl.col('recoE_nue') > 0) & (pl.col('direc_numu').abs() <= 1) & (pl.col('direc_nue').abs() <= 1)
+    
+    def default_direc_reco(self):
+        return pl.when(
+            (pl.col('npfps') < 3) | (pl.col('recoE_nue') > 1.3) #For high energy events or low number of PFPs, we use the hit direc reco
+        ).then(
+            pl.col('direc_nc')
+        ).otherwise(
+            pl.when(
+                pl.col('reco_pdg') == Flavor.NuMu
+            ).then(
+                pl.when(pl.col('direc_numu') != 0).then( #Avoiding cases with zero and moving to the hit direc reco
+                    pl.col('direc_numu')
+                ).otherwise(
+                    pl.col('direc_nc')
+                )
+            ).otherwise(
+                pl.when(
+                    pl.col('reco_pdg') == Flavor.NuE
+                ).then(
+                    pl.when(pl.col('direc_nue') != 0).then( #Avoiding cases with zero and moving to the hit direc reco
+                        pl.col('direc_nue')
+                    ).otherwise(
+                        pl.col('direc_nc')
+                    )
+                ).otherwise(
+                    pl.col('direc_nc')
+                )
+            )
+        )
+
+
     def __init__(self, fname):
         self._load_CAFs_data(fname)
         self.set_flavor_discrimination(Method.Reco)
         self.set_direc_reco(Method.Reco)
         self.set_energy_reco(Method.Reco)
         self.set_nunubar_discrimination(Method.Reco)
+        self.set_data_selection(self.default_data_selection())
 
-    def _load_CAFs_data(self, fname) -> pl.DataFrame:
+    def _load_CAFs_data(self, fname) -> None:
         """
         Load CAFs data from a file.
 
@@ -166,15 +201,21 @@ class DataManager:
 
             direc_numu = fix_empty_arrays(f['cafTree/rec/common/common.ixn.pandora/common.ixn.pandora.dir.lngtrk.y'].array())
             direc_nue = fix_empty_arrays(f['cafTree/rec/common/common.ixn.pandora/common.ixn.pandora.dir.heshw.y'].array())
+            direc_nc = fix_empty_arrays(f['cafTree/rec/common/common.ixn.pandora/common.ixn.pandora.dir.heshw.y'].array())
             weights['direc_numu'] = -ak.flatten(direc_numu) #Minus sign to have the convention negative=upgoing neutrinos
             weights['direc_nue'] = -ak.flatten(direc_nue) #Minus sign to have the convention negative=upgoing neutrinos
+            weights['direc_nc'] = -ak.flatten(direc_nc) #Minus sign to have the convention negative=upgoing neutrinos
 
             cvn_nue = fix_empty_arrays(f['cafTree/rec/common/common.ixn.pandora/common.ixn.pandora.nuhyp.cvn.nue'].array())
             cvn_numu = fix_empty_arrays(f['cafTree/rec/common/common.ixn.pandora/common.ixn.pandora.nuhyp.cvn.numu'].array())
+            cvn_nc = fix_empty_arrays(f['cafTree/rec/common/common.ixn.pandora/common.ixn.pandora.nuhyp.cvn.nc'].array())
 
             weights['cvn_numu'] = ak.flatten(cvn_numu)
             weights['cvn_nue'] = ak.flatten(cvn_nue)
-        
+            weights['cvn_nc'] = ak.flatten(cvn_nc)
+
+            weights['npfps'] = ak.flatten(fix_empty_arrays(f['cafTree/rec/fd/fd.hd.pandora/fd.hd.pandora.npfps'].array()))
+
         weights['direc_true'] = -weights['NuMomY']/weights['Ev'] #Minus sign to have the convention negative=upgoing neutrinos
         weights['nue_w'] *= weights["xsec"]
         weights['numu_w'] *= weights["xsec"]
@@ -200,12 +241,18 @@ class DataManager:
             self.flavor_discrimination = lambda: pl.col("nuPDG")
         elif method == Method.Reco:
             self.flavor_discrimination = lambda: pl.when(
-                pl.col('cvn_nue') > 0.57
+                pl.col('cvn_nue') > pl.col('cvn_numu')
             ).then(
-                Flavor.NuE
+                pl.when(
+                    pl.col('cvn_nue') > pl.col('cvn_nc')
+                ).then(
+                    Flavor.NuE
+                ).otherwise(
+                    Flavor.NC
+                )
             ).otherwise(
                 pl.when(
-                    pl.col('cvn_numu') > 0.54
+                    pl.col('cvn_numu') > pl.col('cvn_nc')
                 ).then(
                     Flavor.NuMu
                 ).otherwise(
@@ -270,16 +317,11 @@ class DataManager:
         Returns:
             None
         """
+
         if method == Method.Truth:
             self.direc_reco = lambda: pl.col('direc_true')
         elif method == Method.Reco:
-            self.direc_reco = lambda: pl.when(
-                pl.col('reco_pdg') == Flavor.NuMu
-            ).then(
-                pl.col('direc_numu')
-            ).otherwise(
-                pl.col('direc_nue')
-            )
+            self.direc_reco = self.default_direc_reco
         elif method == Method.Perso:
             if not isinstance(arg, pl.Expr):
                 raise ValueError("A polars expression is expected when using the Method.Perso method")
@@ -287,7 +329,7 @@ class DataManager:
         elif method == Method.Efficiency:
             if not isinstance(arg, FakeResolution):
                 raise ValueError("A polars FakeResolution object is expected when using the Method.Efficiency method")
-            self.direc_reco = lambda: pl.lit(arg.generate(self.data.select(arg.bin_var).to_series(), self.data['direc_true']))
+            self.direc_reco = lambda: pl.lit(arg.generate(self.data[arg.bin_var], self.data['direc_true']))
         else:
             raise ValueError()
 
@@ -319,6 +361,24 @@ class DataManager:
             self.nunubar_discrimination = lambda: arg.generate(pl.col('nuPDG'), len(self.data)).sign()*pl.col('reco_pdg').abs()
         else:
             raise ValueError()
+        
+    
+    def set_data_selection(self, selection:pl.Expr):
+        """
+        Sets the data selection based on the given selection expression.
+
+        Parameters:
+            selection (pl.Expr): A polars expression representing the selection criteria.
+
+        Raises:
+            ValueError: If the selection is not a polars expression.
+
+        Returns:
+            None
+        """
+        if not isinstance(selection, pl.Expr):
+            raise ValueError("A polars expression is expected for the selection")
+        self.data_selection = selection
 
     def prepare_data(self):
         """
@@ -327,7 +387,9 @@ class DataManager:
         Returns:
             prepared_data (Table): The prepared data with additional columns.
         """
-        prepared_data = self.data.with_columns(
+        prepared_data = self.data.filter(
+            self.data_selection
+        ).with_columns(
             reco_pdg = self.flavor_discrimination()
         ).with_columns(
             reco_pdg = self.nunubar_discrimination()
@@ -384,7 +446,7 @@ class FakeEfficiency:
         random_vals = np.random.rand(size)
 
         return pl.when(
-            pl.lit(random_vals) < true_column.replace(old=pl.Series(self._efficiencies.keys()), new=pl.Series(self._efficiencies.values()))
+            pl.lit(random_vals) < true_column.replace_strict(old=pl.Series(self._efficiencies.keys()), new=pl.Series(self._efficiencies.values()))
         ).then(
             true_column
         ).otherwise(
@@ -400,8 +462,6 @@ class FakeResolution:
     - bins (list): A list of bin values.
     - resolutions (list): A list of resolutions corresponding to each bin.
     - bin_var (pl.Expr): The variable used for binning.
-    - shifts (list, optional): A list of shifts corresponding to each bin. Default is None.
-    - is_relative (bool, optional): A flag indicating whether the resolutions are relative. Default is True.
 
     Raises:
     - ValueError: If the length of bins plus 1 is not equal to the length of resolutions.
@@ -411,19 +471,13 @@ class FakeResolution:
 
     """
 
-    def __init__(self, bins, resolutions, bin_var:pl.Expr, shifts=None, is_relative=True):
+    def __init__(self, bins, resolutions, bin_var:pl.Expr):
         if len(bins) + 1 != len(resolutions):
             raise ValueError("The resolutions must include the values outside the binning (below lowest bin and above highest bin)")
             
         self._bins = bins
         self._resolutions = resolutions
-        self._is_relative = is_relative
         self.bin_var = bin_var
-        if shifts is not None:
-            assert len(shifts) == len(resolutions)
-            self._shifts = shifts
-        else:
-            self._shifts = np.zeros(len(resolutions))
 
     def generate(self, bin_var_values:pl.Series, true_values:pl.Series):
         """
@@ -438,11 +492,7 @@ class FakeResolution:
 
         """
         bin_sort = np.digitize(bin_var_values, self._bins)
-        if self._is_relative:
-            fake_values = true_values*np.random.normal(1, self._resolutions[bin_sort])
-        else:
-            fake_values = true_values + np.random.normal(0, self._resolutions[bin_sort])
-        fake_values += self._shifts[bin_sort] #Adding shifts
+        fake_values = true_values*np.random.normal(1, self._resolutions[bin_sort])
         return fake_values
 
 class EventDistrib:
@@ -464,7 +514,6 @@ class EventDistrib:
         fieldRecoE (str, optional): Name of the column indicating the reconstructed energy. Default is 'recoE'.
         fieldRecoDir (str, optional): Name of the column indicating the reconstructed direction. Default is 'direc_reco'.
         fieldRecoFlv (str, optional): Name of the column indicating the reconstructed flavor. Default is 'reco_pdg'.
-        exposure (float, optional): The exposure in kt.yr. Default is 400.
 
     Attributes:
         events (polars.DataFrame): DataFrame containing event data.
@@ -477,7 +526,6 @@ class EventDistrib:
         fieldRecoE (str): Name of the column indicating the reconstructed energy.
         fieldRecoDir (str): Name of the column indicating the reconstructed direction.
         fieldRecoFlv (str): Name of the column indicating the reconstructed flavor.
-        exposure (float): The exposure in kt.yr.
         hists (dict): Dictionary containing the histograms for different channels.
         Ebins (array-like): Energy bin edges for true energy.
         Czbins (array-like): Cosine zenith angle bin edges for true direction.
@@ -501,7 +549,7 @@ class EventDistrib:
                  fieldIsCC='isCC', fieldNuGen="nuPDG", fieldNueFlux="nue_w",
                  fieldNumuFlux="numu_w", fieldTrueE="Ev", fieldTrueDir="direc_true",
                  fieldRecoE="recoE", fieldRecoDir="direc_reco", fieldRecoFlv="reco_pdg",
-                 exposure = 400, prem=prem_default):
+                 prem=prem_default):
         
         self.events = events
         self.fieldIsCC = fieldIsCC
@@ -513,7 +561,6 @@ class EventDistrib:
         self.fieldRecoE = fieldRecoE
         self.fieldRecoDir = fieldRecoDir
         self.fieldRecoFlv = fieldRecoFlv
-        self.exposure = exposure
 
         self._fill_hists(Ebins, Czbins, Ebins_reco, Czbins_reco)
         self.osc = ROOT.Oscillogram(Ebins, Czbins, prem)
@@ -567,8 +614,6 @@ class EventDistrib:
                 weights = selected[self.fieldNueFlux]
             else:
                 weights = selected[self.fieldNumuFlux]
-
-            weights *= 400./self.exposure #400kt.yr is the ref exposure
 
             full_ch = (ifl, ofl, detected_fl)
 
@@ -709,7 +754,7 @@ class EventDistrib:
         osc_id = channels.index((ifl, ofl))
 
         fig = plt.figure()
-        plt.pcolormesh(self.Ebins, self.Czbins, self.oscillograms[:, :, osc_id], cmap='plasma')
+        plt.pcolormesh(self.Ebins, self.Czbins, self.oscillograms[:, :, osc_id], cmap='jet')
         plt.xscale('log')
         plt.title(f"{ifl.name} -> {ofl.name}")
         plt.xlabel("E [GeV]")
@@ -748,6 +793,7 @@ class EventDistrib:
         plt.tight_layout()
         return fig
     
+    
 def chi2(observed, expected):
     """
     Calculate the chi-square statistic for comparing observed and expected values.
@@ -784,3 +830,59 @@ def LnL(data, mc):
         ))
 
     return llh
+
+class OscFit:
+    def __init__(self, events):
+        self.events = events
+
+        self.__setup()
+       
+    def __setup(self):
+        nufit = get_nufit(MH.Normal)
+
+        fitter = Minuit(self.loss, dm21=nufit.dm21, dm31=nufit.dm31, th12=nufit.th12, th13=nufit.th13, th23=nufit.th23, dcp=nufit.dcp)
+
+        self.fitter = fitter
+
+    def set_limits(self, limits):
+        """
+        Set the limits for the fitting parameters.
+
+        Parameters:
+        - limits (dict): A dictionary containing the limits for each parameter.
+        """
+        self.fitter.limits = limits
+
+    def loss(self, dm21, dm31, th12, th13, th23, dcp):
+        pars = ROOT.OscPars()
+        pars.dm21 = dm21
+        pars.dm31 = dm31
+        pars.th12 = th12
+        pars.th13 = th13
+        pars.th23 = th23
+        pars.dcp  = dcp
+
+        self.events.compute_osc(pars)
+        new_rates = {fl: self.events.detected_events(fl) for fl in self.events.detected_channels}
+
+        total_loss = 0
+        for ch in self.events.detected_channels:
+            total_loss += LnL(self.data_rates[ch], new_rates[ch])
+        return total_loss
+
+    def fit(self, null_hyp, nuisance_params, asimov_true_params, poisson_throws=False):
+        self.events.compute_osc(null_hyp)
+        self.data_rates = {fl: self.events.detected_events(fl) for fl in self.events.detected_channels}
+
+        for par in self.fitter.parameters:
+            if par in nuisance_params:
+                self.fitter.fixed[par] = False
+            else:
+                self.fitter.fixed[par] = True
+            self.fitter.values[par] = getattr(asimov_true_params, par)
+
+        return self.fitter.migrad()
+
+    def plot(self):
+        # Plot the results
+        pass
