@@ -52,11 +52,11 @@ Samples:
 # ...
 # - bin 10: -0.8 <= kNuRecoCosZ < -0.6 && 0. <= kNuERec 0.23
 
-#The axis titles (e.g. kNuRecoCosZ, kNuERec in the above example) must match one "mapped" variables as described in the comment: TODO
+#The axis titles (e.g. kNuRecoCosZ, kNuERec in the above example) must match one "mapped" variables as described in the comment: https://github.com/DUNE/atmospherics-tools/blob/89b2daf6a2f06240b032d65f03067e850cf3e6ae/detsys/Config.yaml#L67-L72
 
 AnalysisBinning:
   - Selection: "NuMu" #Selection Name
-    kSelection: 1 #Index which matches one of the selection enums defined here: #TODO
+    kSelection: 1 #Index which matches one of the selection enums defined here: https://github.com/DUNE/atmospherics-tools/blob/b25e0400f2a571a4e4b6e4bddee58579e7dc37b0/detsys/src/Constants.h#L5-L10
     kNuRecoCosZ: [-1.001, -0.8, -0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6, 0.8, 1.001]
     kNuERec: [0, 0.23, 0.31, 0.47, 0.81, 1.28, 1.99, 3.17, 5.38, 11.54, 1e8]
   - Selection: "NuE"
