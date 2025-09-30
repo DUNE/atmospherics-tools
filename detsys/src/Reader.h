@@ -13,6 +13,8 @@
 #include "duneanaobj/StandardRecord/Proxy/SRProxy.h"
 #include "duneanaobj/StandardRecord/StandardRecord.h"
 
+#include "AnalysisBinningManager.h"
+
 template <typename T>
 class Reader {
  private:
@@ -28,6 +30,8 @@ class Reader {
   //caf::StandardRecordProxy* _sr = nullptr;
   caf::StandardRecord* _sr = nullptr;
   
+  AnalysisBinningManager<T>* AnalysisBinning;
+
   void Open(std::string fname, std::string subfolder);
   void SetupTree();
   void SetupTreeHierarchical();
@@ -46,6 +50,7 @@ class Reader {
   TChain* GetTree();
   TFile* GetFile();
   int GetNentries();
+  void SetAnalysisBinning(AnalysisBinningManager<T>* AnalysisBinning_) {AnalysisBinning = AnalysisBinning_;}
   const T ReturnKinematicParameter(int Par);
   const T GetEventWeight();
 };

@@ -17,6 +17,11 @@ Observable<T>::Observable(YAML::Node ObservableConfig) {
     A.Variable_Int = Kinematic_StringToInt(A.Variable);
     A.Label = AxisNode["Label"].as<std::string>();
 
+    A.isLog = false;
+    if (AxisNode["IsLog"]) {
+      A.isLog = AxisNode["IsLog"].as<bool>();
+    }
+
     if (AxisNode["Binning"]) {
       A.Binning = AxisNode["Binning"].as<std::vector<T>>();
     } else if (AxisNode["BinDefinition"]) {
@@ -85,7 +90,11 @@ Observable<T>::Observable(YAML::Node ObservableConfig) {
     throw;
   } else if (nDimensions == 1) {
     std::string HistName = Name+"_0";
-    std::string HistTitle = Axes[0].Label+";"+Axes[0].Label+";Number of Events";
+    std::string HistTitle = Axes[0].Label;
+    for (size_t iCut=0;iCut<Cuts.size();iCut++) {
+      HistTitle += " ("+std::string(Form("%4.2f",Cuts[iCut].LowerBound))+"<"+Cuts[iCut].Variable+"<"+Form("%4.2f",Cuts[iCut].UpperBound)+")";
+    }
+    HistTitle += ";"+Axes[0].Label+";Number of Events";
     int nBins = Axes[0].Binning.size()-1;
     
     if (typeid(T) == typeid(float)) {
@@ -95,7 +104,14 @@ Observable<T>::Observable(YAML::Node ObservableConfig) {
     }
   } else if (nDimensions == 2) {
     std::string HistName = Name+"_0";
-    std::string HistTitle = Axes[0].Label+";"+Axes[1].Label+";Number of Events";
+
+    std::string HistTitle = Name+";"+Axes[0].Label;
+    for (size_t iCut=0;iCut<Cuts.size();iCut++) {
+      HistTitle += " ("+std::string(Form("%4.2f",Cuts[iCut].LowerBound))+"<"+Cuts[iCut].Variable+"<"+Form("%4.2f",Cuts[iCut].UpperBound)+")";
+    }
+    HistTitle += ";"+Axes[1].Label+";Number of Events";
+
+
     int nXBins = Axes[0].Binning.size()-1;
     int nYBins = Axes[1].Binning.size()-1;
     

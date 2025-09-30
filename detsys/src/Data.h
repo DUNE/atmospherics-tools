@@ -6,6 +6,7 @@ template <typename T>
 struct Data
 {
   int Selection;
+  int AnalysisBinIndex;
   T ev;
   T erec;
   T erec_nue;
@@ -52,6 +53,7 @@ struct Data
 static inline Data<double> float2double(const Data<float>& data){
   Data<double> data_D;
   data_D.Selection = data.Selection;
+  data_D.AnalysisBinIndex = data.AnalysisBinIndex;
   data_D.ev = data.ev;
   data_D.erec = data.erec;
   data_D.erec_nue = data.erec_nue;

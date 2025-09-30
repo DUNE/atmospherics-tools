@@ -140,6 +140,10 @@ const T Reader<T>::ReturnKinematicParameter(int Par) {
     return _data.cvn_nue;
   case kSelection:
     return _data.Selection;
+  case kNuERec:
+    return _data.erec;
+  case kAnalysisBin:
+    return _data.AnalysisBinIndex;
   }
 
 
@@ -156,6 +160,7 @@ const T Reader<T>::GetEventWeight() {
 template<typename T>
 void Reader<T>::UpdateData(){
   
+  _data.AnalysisBinIndex = -1;
   _data.ev = _sr->mc.nu[0].E;
   _data.NuMomX = _sr->mc.nu[0].momentum.x;
   _data.NuMomY = _sr->mc.nu[0].momentum.y;
@@ -164,7 +169,8 @@ void Reader<T>::UpdateData(){
   _data.weight = _sr->mc.nu[0].genweight;
   _data.mode = _sr->mc.nu[0].mode;
 
-  _data.TrueCZ = -_sr->mc.nu[0].momentum.y;
+  TVector3 TrueNuMomentumVector = (TVector3(_sr->mc.nu[0].momentum.X(),_sr->mc.nu[0].momentum.Y(),_sr->mc.nu[0].momentum.Z())).Unit();
+  _data.TrueCZ = -TrueNuMomentumVector.Y();
   
   if(_sr->common.ixn.pandora.size() != 1){
     _data.erec = _BAD_VALUE_;
@@ -200,7 +206,20 @@ void Reader<T>::UpdateData(){
     throw;
   }
 
+  if (std::isnan(_data.RecoCZ)) {
+    return;
+  }
 
+  if (AnalysisBinning->CheckSelectionInAnalysisBinning(_data.Selection)) {
+    std::vector<std::string> AnalysisBinningVars = AnalysisBinning->GetSelectionBinVars(_data.Selection);
+    
+    std::vector<T> EventDetails(AnalysisBinningVars.size());
+    for (size_t iBinVar=0;iBinVar<AnalysisBinningVars.size();iBinVar++) {
+      EventDetails[iBinVar] = ReturnKinematicParameter(Kinematic_StringToInt(AnalysisBinningVars[iBinVar]));
+    }
+    
+    _data.AnalysisBinIndex = AnalysisBinning->GetBin(_data.Selection,EventDetails);
+  }  
 }
 
 template<typename T>

@@ -18,6 +18,7 @@ struct Axis {
   std::string Label;
   int Variable_Int;
   std::vector<T> Binning;
+  bool isLog;
 };
 
 template <typename T>
@@ -27,7 +28,7 @@ class Observable {
   int nDimensions; 
   TH1* HistTemplate;
   std::vector< Cut<T> > Cuts;
-
+  
   std::vector<Axis<T>> Axes;
  public:
   Observable(YAML::Node Config);
@@ -35,6 +36,7 @@ class Observable {
   TH1* ReturnTemplateHistogram() {return HistTemplate;}
   std::vector< Cut<T> > GetCuts() {return Cuts;}
   int GetVariable(int iAxis) {return (Axes.at(iAxis)).Variable_Int;}
+  bool GetIsLog(int iAxis) {return (Axes.at(iAxis)).isLog;}
   int GetNDimensions() {return nDimensions;}
 };
 

@@ -1,30 +1,68 @@
 General:
-  ScaleNormalisationTo: "Default" #Optional - Normalises the integral of all the distributions to the defined sample. The defined sample must match one of the [Samples][Name] nodes defined below
+  ScaleNormalisationTo: "kA = 9.3e-1 (Nom)" #Optional - Normalises the integral of all the distributions to the defined sample. The defined sample must match one of the [Samples][Name] nodes defined below
 
 DrawOptions:
+  AnalysisBinning:
+    OutputName: "AnalysisBinningPlots.pdf" #Output of the file which has all the AnalysisBinningPlots
+    DrawOpts: "HIST" #Used for both full plot and the ratio plot
+    RatioDenominatorSample: "kA = 9.3e-1 (Nom)" #Must match one of the [Samples][Name] nodes defined below
+    LegendHeight: 0.15 #Optional - Defines the height of each legend box
+    LegendFontSize: 0.02 #Optional - Defines the font size used in each legend box
+
   OneDimension:
     OutputName: "1DPlots.pdf" #Output of the file which has all the 1D plots
     DrawOpts: "HIST E1" #Used for both full plot and the ratio plot
-    RatioDenominatorSample: "Default" #Must match one of the [Samples][Name] nodes defined below
-
+    RatioDenominatorSample: "kA = 9.3e-1 (Nom)" #Must match one of the [Samples][Name] nodes defined below
     LegendHeight: 0.15 #Optional - Defines the height of each legend box
-    LegendFontSize: 0.03 #Optional - Defines the font size used in each legend box
-    RatioMaximum: 1.2 #Optional - Defines the maximum of the Y-axis used in the ratio plot
-    RatioMinimum: 0.8 #Optional - Defines the minimum of the Y-axis used in the ratio plot
+    LegendFontSize: 0.02 #Optional - Defines the font size used in each legend box
+    #RatioMaximum: 1.2 #Optional - Defines the maximum of the Y-axis used in the ratio plot. If commented out, automatic range will be calculated
+    #RatioMinimum: 0.8 #Optional - Defines the minimum of the Y-axis used in the ratio plot. If commented out, automatic range will be calculated
+
+  TwoDimension:
+    OutputName: "2DPlots.pdf" #Output of the file which has all the 1D plots
+    DrawOpts: "COLZ TEXT0" #Used for full plot drawing options
 
 Samples:
-  - Name: "Default" #Sample Identifier name
+  - Name: "kA = 9.3e-1 (Nom)" #Sample Identifier name
     FilePath: "./data/Nominal" #Path to directory which contains the set of CAF files to use for this sample. It will grab all "*.root" files within that directory
     SubDirectoryName: "cafmaker" #The CAF files are expected to contain the 'cafTree', 'meta' and 'genieEvt' TTrees. Sometimes, but not all the time, these TTrees are contained in a subdirectory (i.e. 'cafmaker')
     Colour: 1 #Colour from ROOT Colour Wheel
-  - Name: "Plus NSigma"
-    FilePath: "./data/PNSigma"
+  - Name: "kA = 10.23e-1"
+    FilePath: "./data/Recombination_p1Sig/"
     SubDirectoryName: "cafmaker"
     Colour: 2 
-  - Name: "Minus NSigma"
-    FilePath: "./data/MNSigma"
+  - Name: "kA = 8.37e-1"
+    FilePath: "./data/Recombination_n1Sig/"
     SubDirectoryName: "cafmaker"
     Colour: 4 
+
+#The next node defines the bins which would be used in some oscillation analysis. By defining the analysis bins, we can calculate the change in normalisation of each analysis bin for a variation of a parameter. This can then be used to calculate a covariance matrix to include bin-to-bin correlations.
+
+#The number of axes [and bin edges per axis] for each selection can be any number and the number of axes does not have to be identical per each selection. The analysis binning 1D distribution counts up in indices of the minor axis, then major axis. For the example:
+
+#AnalysisBinning:
+#  - Selection: "NuMu"
+#    kSelection: 1
+#    kNuRecoCosZ: [-1.001, -0.8, -0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6, 0.8, 1.001]
+#    kNuERec: [0, 0.23, 0.31, 0.47, 0.81, 1.28, 1.99, 3.17, 5.38, 11.54, 1e8]
+
+#The bin analysis index will first count in the NuERec bins, then the NuRecoCosZ bins, i.e.
+# - bin 0: -1.001 <= kNuRecoCosZ < -0.8 && 0. <= kNuERec 0.23
+# - bin 1: bin 0: -1.001 <= kNuRecoCosZ < -0.8 && 0.23 <= kNuERec 0.31
+# ...
+# - bin 10: -0.8 <= kNuRecoCosZ < -0.6 && 0. <= kNuERec 0.23
+
+#The axis titles (e.g. kNuRecoCosZ, kNuERec in the above example) must match one "mapped" variables as described in the comment: TODO
+
+AnalysisBinning:
+  - Selection: "NuMu" #Selection Name
+    kSelection: 1 #Index which matches one of the selection enums defined here: #TODO
+    kNuRecoCosZ: [-1.001, -0.8, -0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6, 0.8, 1.001]
+    kNuERec: [0, 0.23, 0.31, 0.47, 0.81, 1.28, 1.99, 3.17, 5.38, 11.54, 1e8]
+  - Selection: "NuE"
+    kSelection: 0
+    kNuRecoCosZ: [-1.001, -0.8, -0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6, 0.8, 1.001]
+    kNuERec: [0, 0.11, 0.17, 0.26, 0.4, 0.63, 1.03, 1.71, 2.94, 5.48, 1e8]
 
 #The way in which variables are grabbed from the MC is as follows:
 #First, the [Observables][Axes][Variable] string is converted to an enum here: https://github.com/DUNE/atmospherics-tools/blob/b25e0400f2a571a4e4b6e4bddee58579e7dc37b0/detsys/src/Constants.h#L17-L34
@@ -38,39 +76,92 @@ Observables:
     Axes: #Can have one or two axes per observable
       - Variable: "kNuRecoCosZ" #String used to determine which CAF variable gets returned for this axis.
         Label: "Reconstructed Cosine Zenith" #Axes title used in plotting
-        Binning: [-1.0,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.0] #Bin edges used for axis
+        Binning: [-1.001,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.001] #Bin edges used for axis
       - Variable: "kNuTrueCosZ"
         Label: "True Cosine Zenith"
-        Binning: [-1.0,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.0]
+        Binning: [-1.001,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.001]
 
   - Name: "Reco Cosine Zenith"
     Axes:
       - Variable: "kNuRecoCosZ"
         Label: "Reco Cosine Zenith"
-        Binning: [-1.0,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.0]
-    Cuts: #Optional - Defines whether you want to apply any cuts on variables when making this observable distribution (can be the variable which is plotted or any other)
-      - Variable: "kNuRecoCosZ" #Variable which is being cut on
-        LowerBound: -0.6 #Lower bound of cut
-        UpperBound: 0.6 #Upper bound of cut
-      - Variable: "kNuTrueCosZ" #Can have multiple cuts per observable
+        Binning: [-1.001,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.001]
+
+  - Name: "Reco Cosine Zenith - NuE"
+    Axes:
+      - Variable: "kNuRecoCosZ"
+        Label: "Reco Cosine Zenith - NuE"
+        Binning: [-1.001,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.001]
+    Cuts:
+      - Variable: "kSelection"
         LowerBound: -0.5
         UpperBound: 0.5
 
   - Name: "Reco Cosine Zenith - NuMu"
     Axes:
       - Variable: "kNuRecoCosZ"
-        Label: "Reco Cosine Zenith"
-        Binning: [-1.0,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.0]
+        Label: "Reco Cosine Zenith - NuMu"
+        Binning: [-1.001,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.001]
     Cuts:
       - Variable: "kSelection"
         LowerBound: 0.5
         UpperBound: 1.5
 
+  - Name: "Reco Cosine Zenith - NC"
+    Axes:
+      - Variable: "kNuRecoCosZ"
+        Label: "Reco Cosine Zenith - NC"
+        Binning: [-1.001,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.001]
+    Cuts:
+      - Variable: "kSelection"
+        LowerBound: 1.5
+        UpperBound: 2.5
+
+  - Name: "Reco Neutrino Energy"
+    Axes:
+      - Variable: "kNuERec"
+        IsLog: true
+        Label: "Reco Neutrino Energy"
+        Binning: [0.05,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,1.0,1.2,1.4,1.6,1.8,2.0,3.0,4.0,5.0,10.]
+
+  - Name: "Reco Neutrino Energy - NuE"
+    Axes:
+      - Variable: "kNuERec"
+        IsLog: true
+        Label: "Reco Neutrino Energy - NuE"
+        Binning: [0.05,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,1.0,1.2,1.4,1.6,1.8,2.0,3.0,4.0,5.0,10.]
+    Cuts:
+      - Variable: "kSelection"
+        LowerBound: -0.5
+        UpperBound: 0.5
+
+  - Name: "Reco Neutrino Energy - NuMu"
+    Axes:
+      - Variable: "kNuERec"
+        IsLog: true
+        Label: "Reco Neutrino Energy - NuMu"
+        Binning: [0.05,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,1.0,1.2,1.4,1.6,1.8,2.0,3.0,4.0,5.0,10.]
+    Cuts:
+      - Variable: "kSelection"
+        LowerBound: 0.5
+        UpperBound: 1.5
+
+  - Name: "Reco Neutrino Energy - NC"
+    Axes:
+      - Variable: "kNuERec"
+        IsLog: true
+        Label: "Reco Neutrino Energy - NC"
+        Binning: [0.05,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,1.0,1.2,1.4,1.6,1.8,2.0,3.0,4.0,5.0,10.]
+    Cuts:
+      - Variable: "kSelection"
+        LowerBound: 1.5
+        UpperBound: 2.5
+
   - Name: "True Cosine Zenith"
     Axes:
       - Variable: "kNuTrueCosZ"
         Label: "True Cosine Zenith"
-        Binning: [-1.0,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.0]
+        Binning: [-1.001,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.001]
 
   - Name: "CVN NuMu"
     Axes:

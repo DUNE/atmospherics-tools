@@ -1,6 +1,5 @@
 #include "SampleManager.h"
 
-#include "TCanvas.h"
 #include "TLegend.h"
 
 template<typename T>
@@ -23,6 +22,9 @@ void Sample<T>::ReadData() {
   for (int i=0;i<SampleReader->GetNentries();i++) {
     SampleReader->GetEntry(i);
     
+    T EventWeight = SampleReader->GetEventWeight();
+    AnalysisBinningHistogram->Fill(SampleReader->ReturnKinematicParameter(kAnalysisBin),EventWeight);
+
     for (size_t iMeas=0;iMeas<Measurements.size();iMeas++) {
       bool PassesCut = true;
 
@@ -45,16 +47,14 @@ void Sample<T>::ReadData() {
 	continue;
       }
 
-      T EventWeight = SampleReader->GetEventWeight();
-
       if (Measurements[iMeas].nDimensions == 1) {
 	Measurements[iMeas].Histogram->Fill(SampleReader->ReturnKinematicParameter(Measurements[iMeas].AxisVariables[0]),EventWeight);
       } else if (Measurements[iMeas].nDimensions == 2) {
 	T XVar = SampleReader->ReturnKinematicParameter(Measurements[iMeas].AxisVariables[0]);
 	T YVar = SampleReader->ReturnKinematicParameter(Measurements[iMeas].AxisVariables[1]);
 
-	int nBin = Measurements[iMeas].Histogram->FindBin(XVar,YVar);
-	Measurements[iMeas].Histogram->Fill(nBin,EventWeight);
+	TH2* Hist2D = dynamic_cast<TH2*>(Measurements[iMeas].Histogram);
+	Hist2D->Fill(XVar,YVar,EventWeight);
       } else {
 	std::cerr << "Invalid number of axes! >2" << std::endl;
 	throw;
@@ -62,6 +62,32 @@ void Sample<T>::ReadData() {
 
     }
   }
+
+  for (size_t iMeas=0;iMeas<Measurements.size();iMeas++) {
+    int nAxes =  Measurements[iMeas].nDimensions;
+    if (nAxes == 0) {
+      std::cerr << "Invalid number of axes! = 0" << std::endl;
+      throw;
+    } else if (nAxes == 1) {
+      Measurements[iMeas].Histogram->GetYaxis()->SetTitle((std::string(Measurements[iMeas].Histogram->GetYaxis()->GetTitle())+"/Bin Width").c_str());
+    } else if (nAxes == 2) {
+      Measurements[iMeas].Histogram->GetZaxis()->SetTitle((std::string(Measurements[iMeas].Histogram->GetZaxis()->GetTitle())+"/Bin Width").c_str());
+    } else {
+      std::cerr << "Invalid number of axes! >2" << std::endl;
+      throw;
+    }
+
+    Measurements[iMeas].Histogram->Scale(1.0,"width");
+  }
+}
+
+template<typename T>
+void Sample<T>::SetAnalysisBinning(AnalysisBinningManager<T>* AnalysisBinning_) {
+  SampleReader->SetAnalysisBinning(AnalysisBinning_);
+  AnalysisBinning = AnalysisBinning_;
+
+  AnalysisBinningHistogram = new TH1D((Name+"_AnalysisBinning").c_str(),"Analysis Binning;Bin Number;Events",AnalysisBinning->GetNBins(),0,AnalysisBinning->GetNBins());
+  AnalysisBinningHistogram->SetLineColor(SampleColour);
 }
 
 template<typename T>
@@ -123,7 +149,6 @@ void Sample<T>::SetObservables(ObservableManager<T>* ObsManager) {
 
     std::cout << std::endl;
   }
-
 }
 
 template<typename T>
@@ -141,6 +166,7 @@ TH1* Sample<T>::GetMeasurement(int iMeas) {
 
 template<typename T>
 void Sample<T>::Scale(T ScaleFactor) {
+  AnalysisBinningHistogram->Scale(ScaleFactor);
   for (int iMeas=0;iMeas<(int)Measurements.size();iMeas++) {
     Measurements[iMeas].Histogram->Scale(ScaleFactor);
   }
@@ -174,132 +200,259 @@ void SampleManager<T>::ScaleToNormalisation(std::string SampleNameToNormTo) {
   }
   
   for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
-    T Factor = (T)Samples[IndexToNormTo]->GetNEvents()/(T)Samples[iSamp]->GetNEvents();
+    T Factor = static_cast<T>(Samples[IndexToNormTo]->GetNEvents())/static_cast<T>(Samples[iSamp]->GetNEvents());
     Samples[iSamp]->Scale(Factor);
   }
 }
 
 template<typename T>
-void SampleManager<T>::Plot1D(YAML::Node Config) {
+void SampleManager<T>::Plot1DRatioHists(TCanvas* Canv, std::vector<TH1*> Hists) {
 
-  std::string OutputFileName = Config["OutputName"].as<std::string>();
-  std::string DrawOptions = Config["DrawOpts"].as<std::string>();
-  std::string SampleNameToNormTo = Config["RatioDenominatorSample"].as<std::string>();
+  std::vector<TLegend*> Legends(Hists.size());
 
-  T LegendHeight = 0.2;
+  for (size_t iSamp=0;iSamp<Hists.size();iSamp++) {
+    if (static_cast<int>(iSamp) == IndexToRatioTo) continue;
+    Hists[iSamp]->Divide(Hists[IndexToRatioTo]);
+  }
+  Hists[IndexToRatioTo]->Divide(Hists[IndexToRatioTo]);
+
+  if (RatioYAxisMax != _BAD_VALUE_) {
+    for (size_t iSamp=0;iSamp<Hists.size();iSamp++) {
+      Hists[iSamp]->SetMaximum(RatioYAxisMax);
+      Hists[iSamp]->SetMinimum(RatioYAxisMin);
+    }
+  } else {
+    T Max = -1e8;
+    T Min = 1e8;
+
+    for (size_t iSamp=0;iSamp<Hists.size();iSamp++) {
+      for (int xBin=1;xBin<=Hists[iSamp]->GetNbinsX();xBin++) {
+	if ((Hists[iSamp]->GetBinContent(xBin)+Hists[iSamp]->GetBinError(xBin)) > Max) {Max = (Hists[iSamp]->GetBinContent(xBin)+Hists[iSamp]->GetBinError(xBin));}
+	if ((Hists[iSamp]->GetBinContent(xBin)-Hists[iSamp]->GetBinError(xBin)) < Min) {Min = (Hists[iSamp]->GetBinContent(xBin)-Hists[iSamp]->GetBinError(xBin));}
+      }
+    }
+
+    for (size_t iSamp=0;iSamp<Hists.size();iSamp++) {
+      Hists[iSamp]->GetYaxis()->SetRangeUser(Min-0.1*(Max-Min),Max+0.1*(Max-Min));
+    }
+  }
+
+
+  for (size_t iSamp=0;iSamp<Hists.size();iSamp++) {
+    Hists[iSamp]->GetYaxis()->SetTitle(std::string("Ratio to "+SampleNameToRatioTo).c_str());
+
+    if (iSamp==0) {
+      Hists[iSamp]->Draw((DrawOptions_1D).c_str());
+    } else {
+      Hists[iSamp]->Draw((DrawOptions_1D+" SAME").c_str());
+    }
+
+    Legends[iSamp] = new TLegend(0.8,0.9-(1.0+static_cast<T>(iSamp))*LegendHeight,0.99,0.9-static_cast<T>(iSamp)*LegendHeight);
+    Legends[iSamp]->SetTextSize(FontSize);
+    Legends[iSamp]->AddEntry(Hists[iSamp],(Samples[iSamp]->GetName()).c_str(),"l");
+    Legends[iSamp]->AddEntry((TObject*)0,Form("Mean: %4.5f",Hists[iSamp]->GetMean()),"");
+    Legends[iSamp]->AddEntry((TObject*)0,Form("RMS: %4.5f",Hists[iSamp]->GetRMS()),"");
+    Legends[iSamp]->Draw();
+  }
+
+  Canv->Print(OutputFileName_1D.c_str());
+}
+
+template<typename T>
+void SampleManager<T>::Plot1DHists(TCanvas* Canv, std::vector<TH1*> Hists) {
+
+  std::vector<TLegend*> Legends(Hists.size());
+
+  T Max = -1e8;
+  T Min = 1e8;
+  
+  for (size_t iSamp=0;iSamp<Hists.size();iSamp++) {
+    for (int xBin=1;xBin<=Hists[iSamp]->GetNbinsX();xBin++) {
+      if ((Hists[iSamp]->GetBinContent(xBin)+Hists[iSamp]->GetBinError(xBin)) > Max) {Max = (Hists[iSamp]->GetBinContent(xBin)+Hists[iSamp]->GetBinError(xBin));}
+      if ((Hists[iSamp]->GetBinContent(xBin)-Hists[iSamp]->GetBinError(xBin)) < Min) {Min = (Hists[iSamp]->GetBinContent(xBin)-Hists[iSamp]->GetBinError(xBin));}
+    }
+  }
+  
+  for (size_t iSamp=0;iSamp<Hists.size();iSamp++) {
+    Hists[iSamp]->GetYaxis()->SetRangeUser(Min-0.1*(Max-Min),Max+0.1*(Max-Min));
+  }
+
+  for (size_t iSamp=0;iSamp<Hists.size();iSamp++) {
+
+    if (iSamp==0) {
+      Hists[iSamp]->Draw((DrawOptions_1D).c_str());
+    } else {
+      Hists[iSamp]->Draw((DrawOptions_1D+" SAME").c_str());
+    }
+
+    Legends[iSamp] = new TLegend(0.8,0.9-(1.0+static_cast<T>(iSamp))*LegendHeight,0.99,0.9-static_cast<T>(iSamp)*LegendHeight);
+    Legends[iSamp]->SetTextSize(FontSize);
+    Legends[iSamp]->AddEntry(Hists[iSamp],(Samples[iSamp]->GetName()).c_str(),"l");
+    Legends[iSamp]->AddEntry((TObject*)0,Form("Entries: %4.5f",Hists[iSamp]->GetEntries()),"");
+    Legends[iSamp]->AddEntry((TObject*)0,Form("Integral: %4.5f",Hists[iSamp]->Integral()),"");
+    Legends[iSamp]->AddEntry((TObject*)0,Form("Mean: %4.5f",Hists[iSamp]->GetMean()),"");
+    Legends[iSamp]->AddEntry((TObject*)0,Form("RMS: %4.5f",Hists[iSamp]->GetRMS()),"");
+    Legends[iSamp]->Draw();
+  }
+
+  Canv->Print(OutputFileName_1D.c_str());
+}
+
+template<typename T>
+void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
+  OutputFileName_1D = Config["OutputName"].as<std::string>();
+  DrawOptions_1D = Config["DrawOpts"].as<std::string>();
+
+  LegendHeight = 0.2;
   if (Config["LegendHeight"]) {
     LegendHeight = Config["LegendHeight"].as<T>();
   }
 
-  T FontSize = _BAD_VALUE_;
+  FontSize = _BAD_VALUE_;
   if (Config["LegendFontSize"]) {
     FontSize = Config["LegendFontSize"].as<T>();
   }
 
-  T RatioYAxisMax = _BAD_VALUE_;
+  IndexToRatioTo = -1;
+  for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
+    if (Samples[iSamp]->GetName() == SampleNameToRatioTo) {
+      IndexToRatioTo = iSamp;
+      break;
+    }
+  }
+  if (IndexToRatioTo == -1) {
+    std::cerr << "Did not find:" << SampleNameToRatioTo << std::endl;
+    std::cerr << "Available:" << std::endl;
+    for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
+      std::cerr << "\t" << iSamp << " " << Samples[iSamp]->GetName() << std::endl;
+    }
+  }
+
+  TCanvas* Canv = new TCanvas;
+  Canv->SetRightMargin(0.2);
+  Canv->SetLeftMargin(0.15);
+  Canv->Print((OutputFileName_1D+"[").c_str());
+
+  std::vector<TH1*> Hists(Samples.size());
+
+  //===============================================================================
+  //AnalysisBinning
+
+  for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
+    Hists[iSamp] = Samples[iSamp]->GetAnalysisBinningHistogram();
+    Hists[iSamp]->SetStats(false);
+  }
+
+  Plot1DHists(Canv, Hists);
+  Plot1DRatioHists(Canv, Hists);
+
+  Canv->Print((OutputFileName_1D+"]").c_str());
+}
+
+template<typename T>
+void SampleManager<T>::Plot1D(YAML::Node Config) {
+
+  OutputFileName_1D = Config["OutputName"].as<std::string>();
+  DrawOptions_1D = Config["DrawOpts"].as<std::string>();
+  SampleNameToRatioTo = Config["RatioDenominatorSample"].as<std::string>();
+
+  LegendHeight = 0.2;
+  if (Config["LegendHeight"]) {
+    LegendHeight = Config["LegendHeight"].as<T>();
+  }
+
+  FontSize = _BAD_VALUE_;
+  if (Config["LegendFontSize"]) {
+    FontSize = Config["LegendFontSize"].as<T>();
+  }
+
+  RatioYAxisMax = _BAD_VALUE_;
   if (Config["RatioMaximum"]) {
     RatioYAxisMax = Config["RatioMaximum"].as<T>();
   }
-  T RatioYAxisMin = _BAD_VALUE_;
+  RatioYAxisMin = _BAD_VALUE_;
   if (Config["RatioMinimum"]) {
     RatioYAxisMin = Config["RatioMinimum"].as<T>();
   }
 
-  int nSamples = Samples.size();
-  int nObservables = ObsManager->GetNObservables();
+  IndexToRatioTo = -1;
+  for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
+    if (Samples[iSamp]->GetName() == SampleNameToRatioTo) {
+      IndexToRatioTo = iSamp;
+      break;
+    }
+  }
+  if (IndexToRatioTo == -1) {
+    std::cerr << "Did not find:" << SampleNameToRatioTo << std::endl;
+    std::cerr << "Available:" << std::endl;
+    for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
+      std::cerr << "\t" << iSamp << " " << Samples[iSamp]->GetName() << std::endl;
+    }
+  }
 
   TCanvas* Canv = new TCanvas;
   Canv->SetRightMargin(0.2);
-  Canv->Print((OutputFileName+"[").c_str());
+  Canv->SetLeftMargin(0.15);
+  Canv->Print((OutputFileName_1D+"[").c_str());
 
-  std::vector<TLegend*> Legends(nSamples);
-  std::vector<TH1*> Hists(nSamples);
+  std::vector<TH1*> Hists(Samples.size());
 
-  for (int iObs=0;iObs<nObservables;iObs++) {
+  //===============================================================================
+  //Observations
+
+  for (int iObs=0;iObs<ObsManager->GetNObservables();iObs++) {
     if (ObsManager->GetObservable(iObs)->GetNDimensions() != 1) continue;
 
-    for (int iSamp=0;iSamp<nSamples;iSamp++) {
-      Hists[iSamp] = Samples[iSamp]->GetMeasurement(iObs);
+    bool IsLog = ObsManager->GetObservable(iObs)->GetIsLog(0);
+    Canv->SetLogx(IsLog);
 
-      TH1* Hist = Hists[iSamp];
-      Hist->SetStats(false);
-      
-      if (iSamp==0) {
-	Hist->Draw(DrawOptions.c_str());
-      } else {
-	Hist->Draw((DrawOptions+" SAME").c_str());
-      }
-
-      Legends[iSamp] = new TLegend(0.8,0.9-(1+iSamp)*LegendHeight,0.99,0.9-iSamp*LegendHeight);
-      Legends[iSamp]->SetTextSize(FontSize);
-      Legends[iSamp]->AddEntry(Hist,(Samples[iSamp]->GetName()).c_str(),"l");
-      Legends[iSamp]->AddEntry((TObject*)0,Form("Mean: %4.5f",Hist->GetMean()),"");
-      Legends[iSamp]->AddEntry((TObject*)0,Form("RMS: %4.5f",Hist->GetRMS()),"");
-      Legends[iSamp]->Draw();
-    }
-
-    Canv->Print(OutputFileName.c_str());
-
-    int IndexToNormTo = -1;
     for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
-      if (Samples[iSamp]->GetName() == SampleNameToNormTo) {
-	IndexToNormTo = iSamp;
-	break;
-      }
-    }
-    if (IndexToNormTo == -1) {
-      std::cerr << "Did not find:" << SampleNameToNormTo << std::endl;
-      std::cerr << "Available:" << std::endl;
-      for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
-	std::cerr << "\t" << iSamp << " " << Samples[iSamp]->GetName() << std::endl;
-      }
-    }
-    
-    for (int iSamp=0;iSamp<nSamples;iSamp++) {
-      if (iSamp == IndexToNormTo) continue;
-      Hists[iSamp]->Divide(Hists[IndexToNormTo]);
-    }
-    Hists[IndexToNormTo]->Divide(Hists[IndexToNormTo]);
-
-    if (RatioYAxisMax != _BAD_VALUE_) {
-      for (int iSamp=0;iSamp<nSamples;iSamp++) {
-	Hists[iSamp]->SetMaximum(RatioYAxisMax);
-	Hists[iSamp]->SetMinimum(RatioYAxisMin);
-      }
-    } else {
-      T Max = -1e8;
-      T Min = 1e8;
-
-      for (int iSamp=0;iSamp<nSamples;iSamp++) {
-	if (Hists[iSamp]->GetMaximum() > Max) {Max = Hists[iSamp]->GetMaximum();}
-	if (Hists[iSamp]->GetMinimum() < Min) {Min = Hists[iSamp]->GetMinimum();}
-      }
-
-      for (int iSamp=0;iSamp<nSamples;iSamp++) {
-	Hists[iSamp]->SetMaximum(Max+1.3*(Max-Min));
-	Hists[iSamp]->SetMinimum(Min-1.3*(Max-Min));
-      }
+      Hists[iSamp] = Samples[iSamp]->GetMeasurement(iObs);
+      Hists[iSamp]->SetStats(false);
     }
 
-    for (int iSamp=0;iSamp<nSamples;iSamp++) {
-      Hists[iSamp]->GetYaxis()->SetTitle(std::string("Ratio to "+SampleNameToNormTo).c_str());
-
-      if (iSamp==0) {
-        Hists[iSamp]->Draw(DrawOptions.c_str());
-      } else {
-        Hists[iSamp]->Draw((DrawOptions+" SAME").c_str());
-      }
-
-      Legends[iSamp] = new TLegend(0.8,0.9-(1+iSamp)*LegendHeight,0.99,0.9-iSamp*LegendHeight);
-      Legends[iSamp]->SetTextSize(FontSize);
-      Legends[iSamp]->AddEntry(Hists[iSamp],(Samples[iSamp]->GetName()).c_str(),"l");
-      Legends[iSamp]->AddEntry((TObject*)0,Form("Mean: %4.5f",Hists[iSamp]->GetMean()),"");
-      Legends[iSamp]->AddEntry((TObject*)0,Form("RMS: %4.5f",Hists[iSamp]->GetRMS()),"");
-      Legends[iSamp]->Draw();
-    }
-
-    Canv->Print(OutputFileName.c_str());    
+    Plot1DHists(Canv, Hists);
+    Plot1DRatioHists(Canv, Hists);
   }
 
-  Canv->Print((OutputFileName+"]").c_str());
+  Canv->Print((OutputFileName_1D+"]").c_str());
+}
+
+template<typename T>
+void SampleManager<T>::Plot2D(YAML::Node Config) {
+
+  OutputFileName_2D = Config["OutputName"].as<std::string>();
+  DrawOptions_2D = Config["DrawOpts"].as<std::string>();
+
+  TCanvas* Canv = new TCanvas;
+  Canv->SetRightMargin(0.2);
+  Canv->SetLeftMargin(0.15);
+  Canv->Print((OutputFileName_2D+"[").c_str());
+
+  std::vector<TH1*> Hists(Samples.size());
+
+  //===============================================================================
+  //Observations
+
+  for (int iObs=0;iObs<ObsManager->GetNObservables();iObs++) {
+    if (ObsManager->GetObservable(iObs)->GetNDimensions() != 2) continue;
+
+    bool IsLogX = ObsManager->GetObservable(iObs)->GetIsLog(0);
+    Canv->SetLogx(IsLogX);
+
+    bool IsLogY = ObsManager->GetObservable(iObs)->GetIsLog(1);
+    Canv->SetLogy(IsLogY);
+
+    for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
+      Hists[iSamp] = Samples[iSamp]->GetMeasurement(iObs);
+      Hists[iSamp]->SetTitle(Samples[iSamp]->GetName().c_str());
+      Hists[iSamp]->SetStats(false);
+
+      Hists[iSamp]->Draw(DrawOptions_2D.c_str());
+      Canv->Print(OutputFileName_2D.c_str());
+    }
+
+  }
+
+  Canv->Print((OutputFileName_2D+"]").c_str());
 }

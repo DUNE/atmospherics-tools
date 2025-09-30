@@ -21,6 +21,8 @@ enum KinematicParameters {
   kCVNNuMu,
   kCVNNuE,
   kSelection,
+  kNuERec,
+  kAnalysisBin,
   nKinPars
 };
 
@@ -39,6 +41,12 @@ inline int Kinematic_StringToInt(std::string Str) {
   }
   if (Str == "kSelection") {
     return kSelection;
+  }
+  if (Str == "kNuERec") {
+    return kNuERec;
+  }
+  if (Str == "kAnalysisBin") {
+    return kAnalysisBin;
   }
 
   std::cerr << "Did not find std::string -> int mapping for string:" << Str << std::endl;

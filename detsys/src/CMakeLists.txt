@@ -29,12 +29,12 @@ cmessage(STATUS "EIGEN: ${OscLib_LIBS}")
 
 set(source_IO
 #  Reader.cxx Flux.cxx FluxManager.cxx Calculator.cxx Writer.cxx DirWriter.cxx SRWriter.cxx
-  Reader.cxx SampleManager.cxx ObservableManager.cxx
+  Reader.cxx SampleManager.cxx ObservableManager.cxx AnalysisBinningManager.cxx
   )
 
 set(includes_IO
 #  Reader.h Flux.h FluxManager.h Calculator.h Writer.h DirWriter.h SRWriter.h Data.h Constants.h
-  Reader.h SampleManager.h ObservableManager.h
+  Reader.h SampleManager.h ObservableManager.h AnalysisBinningManager.h
   )
 
 ############################Weightor############################
