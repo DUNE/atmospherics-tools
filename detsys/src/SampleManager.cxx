@@ -299,9 +299,29 @@ void SampleManager<T>::Plot1DHists(TCanvas* Canv, std::vector<TH1*> Hists) {
 }
 
 template<typename T>
+T SampleManager<T>::CalculateCovariance(T XNominalBinContent, std::vector<T> XVariedBinContents, T YNominalBinContent, std::vector<T> YVariedBinContents) {
+  T Covariance = 0.;
+  
+  size_t nVariedSamples = XVariedBinContents.size();
+  if (nVariedSamples != YVariedBinContents.size()) {
+    std::cerr << "Invalid shape of XVariedBinContents and YVariedBinContents" << std::endl;
+    throw;
+  }
+  
+  for (size_t iMeas=0;iMeas<nVariedSamples;iMeas++) {
+    Covariance += (XVariedBinContents[iMeas]-XNominalBinContent)*(YVariedBinContents[iMeas]-YNominalBinContent);
+  }
+  Covariance /= nVariedSamples;
+
+  return Covariance;
+}
+
+template<typename T>
 void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   OutputFileName_1D = Config["OutputName"].as<std::string>();
   DrawOptions_1D = Config["DrawOpts"].as<std::string>();
+  std::string NominalSample = Config["NominalSample"].as<std::string>();
+  SampleNameToRatioTo = NominalSample;
 
   LegendHeight = 0.2;
   if (Config["LegendHeight"]) {
@@ -327,6 +347,7 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
       std::cerr << "\t" << iSamp << " " << Samples[iSamp]->GetName() << std::endl;
     }
   }
+  int NominalIndex = IndexToRatioTo;
 
   TCanvas* Canv = new TCanvas;
   Canv->SetRightMargin(0.2);
@@ -345,6 +366,69 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
 
   Plot1DHists(Canv, Hists);
   Plot1DRatioHists(Canv, Hists);
+
+  //===============================================================================
+  //Calculate the covariance matrix
+  
+  int nBins = AnalysisBinning->GetNBins();
+  TH2* CovarianceMatrix;
+  TH2* CorrelationMatrix;
+  TH1* CovarianceMatrixDiag;
+  if (typeid(T) == typeid(float)) {
+    CovarianceMatrix = new TH2F("AnalysisBinningCovMat","Covariance Matrix;Analysis Binning;Analysis Binning",nBins,0,nBins,nBins,0,nBins);
+    CorrelationMatrix = new TH2F("AnalysisBinningCorrMat","Correlation Matrix;Analysis Binning;Analysis Binning",nBins,0,nBins,nBins,0,nBins);
+    CovarianceMatrixDiag = new TH1F("AnalysisBinningCovMatDiag","Covariance Matrix;Analysis Binning;#sqrt{Covariance Diagonal}",nBins,0,nBins);
+  } else {
+    CovarianceMatrix = new TH2D("AnalysisBinningCovMat","Covariance Matrix;Analysis Binning;Analysis Binning",nBins,0,nBins,nBins,0,nBins);
+    CorrelationMatrix = new TH2D("AnalysisBinningCorrMat","Correlation Matrix;Analysis Binning;Analysis Binning",nBins,0,nBins,nBins,0,nBins);
+    CovarianceMatrixDiag = new TH1D("AnalysisBinningCovMat","Covariance Matrix;Analysis Binning;#sqrt{Covariance Diagonal}",nBins,0,nBins);
+  }
+
+  for (int xBin=0;xBin<nBins;xBin++) {
+    T XNominalBinContent = Samples[NominalIndex]->GetAnalysisBinningHistogram()->GetBinContent(xBin+1);
+
+    std::vector<T> XVariedBinContents;
+    for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
+      if (static_cast<int>(iSamp) == NominalIndex) continue;
+      XVariedBinContents.push_back(Samples[iSamp]->GetAnalysisBinningHistogram()->GetBinContent(xBin+1));
+    }
+    
+    for (int yBin=0;yBin<nBins;yBin++) {
+      T YNominalBinContent = Samples[NominalIndex]->GetAnalysisBinningHistogram()->GetBinContent(yBin+1);
+      
+      std::vector<T> YVariedBinContents;
+      for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
+	if (static_cast<int>(iSamp) == NominalIndex) continue;
+	YVariedBinContents.push_back(Samples[iSamp]->GetAnalysisBinningHistogram()->GetBinContent(yBin+1));
+      }
+      
+      T Covariance = CalculateCovariance(XNominalBinContent,XVariedBinContents,YNominalBinContent,YVariedBinContents);
+      CovarianceMatrix->SetBinContent(xBin+1,yBin+1,Covariance);
+    }
+  }
+  CovarianceMatrix->SetStats(false);
+  CovarianceMatrix->Draw("COLZ");
+  Canv->Print(OutputFileName_1D.c_str());
+
+  CovarianceMatrixDiag->SetStats(false);
+  for (int xBin=0;xBin<nBins;xBin++) {
+    CovarianceMatrixDiag->SetBinContent(xBin+1,TMath::Sqrt(CovarianceMatrix->GetBinContent(xBin+1,xBin+1)));
+  }
+  CovarianceMatrixDiag->Draw();
+  Canv->Print(OutputFileName_1D.c_str());
+
+  CorrelationMatrix->SetStats(false);
+  for (int xBin=0;xBin<nBins;xBin++) {
+    for (int yBin=0;yBin<nBins;yBin++) {
+      if (CovarianceMatrixDiag->GetBinContent(xBin+1) > 0 && CovarianceMatrixDiag->GetBinContent(yBin+1) > 0) {
+	CorrelationMatrix->SetBinContent(xBin+1,yBin+1,CovarianceMatrix->GetBinContent(xBin+1,yBin+1)/(CovarianceMatrixDiag->GetBinContent(xBin+1)*CovarianceMatrixDiag->GetBinContent(yBin+1)));
+      } else {
+	CorrelationMatrix->SetBinContent(xBin+1,yBin+1,0.);
+      }
+    }
+  }
+  CorrelationMatrix->Draw("COLZ");
+  Canv->Print(OutputFileName_1D.c_str());
 
   Canv->Print((OutputFileName_1D+"]").c_str());
 }

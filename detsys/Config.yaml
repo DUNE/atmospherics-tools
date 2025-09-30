@@ -5,7 +5,7 @@ DrawOptions:
   AnalysisBinning:
     OutputName: "AnalysisBinningPlots.pdf" #Output of the file which has all the AnalysisBinningPlots
     DrawOpts: "HIST" #Used for both full plot and the ratio plot
-    RatioDenominatorSample: "kA = 9.3e-1 (Nom)" #Must match one of the [Samples][Name] nodes defined below
+    NominalSample: "kA = 9.3e-1 (Nom)" #Must match one of the [Samples][Name] nodes defined below
     LegendHeight: 0.15 #Optional - Defines the height of each legend box
     LegendFontSize: 0.02 #Optional - Defines the font size used in each legend box
 
@@ -57,12 +57,12 @@ Samples:
 AnalysisBinning:
   - Selection: "NuMu" #Selection Name
     kSelection: 1 #Index which matches one of the selection enums defined here: https://github.com/DUNE/atmospherics-tools/blob/b25e0400f2a571a4e4b6e4bddee58579e7dc37b0/detsys/src/Constants.h#L5-L10
-    kNuRecoCosZ: [-1.001, -0.8, -0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6, 0.8, 1.001]
-    kNuERec: [0, 0.23, 0.31, 0.47, 0.81, 1.28, 1.99, 3.17, 5.38, 11.54, 1e8]
+    kNuRecoCosZ: [-1.001, -0.6, -0.2, 0.2, 0.6, 1.001]
+    kNuERec: [0, 0.31, 0.81, 1.99, 5.38, 1e8]
   - Selection: "NuE"
     kSelection: 0
-    kNuRecoCosZ: [-1.001, -0.8, -0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6, 0.8, 1.001]
-    kNuERec: [0, 0.11, 0.17, 0.26, 0.4, 0.63, 1.03, 1.71, 2.94, 5.48, 1e8]
+    kNuRecoCosZ: [-1.001, -0.6, -0.2, 0.2, 0.6, 1.001]
+    kNuERec: [0, 0.17, 0.4, 1.03, 2.94, 1e8]
 
 #The way in which variables are grabbed from the MC is as follows:
 #First, the [Observables][Axes][Variable] string is converted to an enum here: https://github.com/DUNE/atmospherics-tools/blob/b25e0400f2a571a4e4b6e4bddee58579e7dc37b0/detsys/src/Constants.h#L17-L34
