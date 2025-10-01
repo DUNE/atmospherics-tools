@@ -19,7 +19,7 @@ endif(ROOT_FOUND)
 
 add_executable(ComparisonScript ComparisonScript.cxx)
 target_link_libraries(ComparisonScript
-  LINK_PUBLIC Utils_IO ROOT::EG ${ROOT_LIBRARIES} OscLib GENIE3::All yaml-cpp)
+  LINK_PUBLIC Utils_IO ROOT::EG ${ROOT_LIBRARIES} GENIE3::All NuOscillator yaml-cpp)
 target_compile_features(ComparisonScript PRIVATE cxx_std_17)
 
 target_include_directories(ComparisonScript

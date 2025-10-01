@@ -153,8 +153,7 @@ const T Reader<T>::ReturnKinematicParameter(int Par) {
 
 template<typename T>
 const T Reader<T>::GetEventWeight() {
-  //return _data.weight / _POT;
-  return 1;
+  return _data.weight;
 }
 
 template<typename T>

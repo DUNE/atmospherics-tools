@@ -14,6 +14,7 @@ AnalysisBinningManager<T>::AnalysisBinningManager(YAML::Node Config_) {
     throw;
   }
 
+  std::cout << "\nAnalysis Binning used for calculation of covariance/correlation matrices -" << std::endl;
   for (const auto& Selection : Config["AnalysisBinning"]) {
 
     int SelectionIndex = -1;
@@ -49,17 +50,18 @@ AnalysisBinningManager<T>::AnalysisBinningManager(YAML::Node Config_) {
   }
 
   for (size_t iSelecBinning=0;iSelecBinning<AnalysisSelectionBinning.size();iSelecBinning++) {
-    std::cout << "SelectionIndex:" << AnalysisSelectionBinning[iSelecBinning].SelectionIndex << std::endl;
-    std::cout << "SelectionName:" << AnalysisSelectionBinning[iSelecBinning].SelectionName << std::endl;
+    std::cout << "\tSelectionIndex:" << AnalysisSelectionBinning[iSelecBinning].SelectionIndex << std::endl;
+    std::cout << "\tSelectionName:" << AnalysisSelectionBinning[iSelecBinning].SelectionName << std::endl;
     for (size_t iVar=0;iVar<AnalysisSelectionBinning[iSelecBinning].BinVars.size();iVar++) {
-      std::cout << AnalysisSelectionBinning[iSelecBinning].BinVars[iVar] << std::endl;
-      std::cout << "\t";
+      std::cout << "\t" << AnalysisSelectionBinning[iSelecBinning].BinVars[iVar] << ":" << std::endl;
+      std::cout << "\t\t";
       for (size_t iBinEdge=0;iBinEdge<AnalysisSelectionBinning[iSelecBinning].BinEdges[iVar].size();iBinEdge++) {
 	std::cout << AnalysisSelectionBinning[iSelecBinning].BinEdges[iVar][iBinEdge] << ", ";
       }
       std::cout << std::endl;
     }
   }
+  std::cout << "\n" << std::endl;
 
 }
 

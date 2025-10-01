@@ -1,7 +1,6 @@
 #include "FluxManager.h"
 
-FluxManager::FluxManager(const std::map<Flavour, std::string> &fnames)
-: _fnames(fnames)
+FluxManager::FluxManager(const std::map<Flavour, std::string> &fnames) : _fnames(fnames)
 {
     Process();
 }

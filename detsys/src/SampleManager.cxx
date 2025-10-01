@@ -381,7 +381,7 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   } else {
     CovarianceMatrix = new TH2D("AnalysisBinningCovMat","Covariance Matrix;Analysis Binning;Analysis Binning",nBins,0,nBins,nBins,0,nBins);
     CorrelationMatrix = new TH2D("AnalysisBinningCorrMat","Correlation Matrix;Analysis Binning;Analysis Binning",nBins,0,nBins,nBins,0,nBins);
-    CovarianceMatrixDiag = new TH1D("AnalysisBinningCovMat","Covariance Matrix;Analysis Binning;#sqrt{Covariance Diagonal}",nBins,0,nBins);
+    CovarianceMatrixDiag = new TH1D("AnalysisBinningCovMatDiag","Covariance Matrix;Analysis Binning;#sqrt{Covariance Diagonal}",nBins,0,nBins);
   }
 
   for (int xBin=0;xBin<nBins;xBin++) {

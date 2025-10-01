@@ -93,5 +93,25 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(argparse)
 
+CPMAddPackage(
+  NAME NuOscillator
+    VERSION v1.4.3
+    GITHUB_REPOSITORY "dbarrow257/NuOscillator"
+    GIT_TAG "v1.4.3"
+    OPTIONS
+    "UseGPU 0"
+    "UseMultithreading 1"
+    "UseDoubles 1"
+
+    "UseCUDAProb3Linear 0"
+    "UseCUDAProb3 1"
+    "UseProbGPULinear 0"
+    "UseProb3ppLinear 0"
+    "UseNuFASTLinear  0"
+    "UseNuSQUIDSLinear 0"
+    "UseOscProb  0"
+    "UseGLoBESLinear 0"
+)
+
 add_subdirectory(src)
 add_subdirectory(app)

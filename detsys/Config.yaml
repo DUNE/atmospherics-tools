@@ -180,3 +180,57 @@ Observables:
       - Variable: "kSelection"
         Label: "Selection"
         BinDefinition: [4,-0.5,3.5]
+
+Fluxes:
+  FluxDir: "/cvmfs/dune.osgstorage.org/pnfs/fnal.gov/usr/dune/persistent/stash/TaskForce_Flux/atmos/Honda_interp/"
+  nue: "honda_2d_homestake_2015_nue.root"
+  nuebar: "honda_2d_homestake_2015_nuebar.root"
+  numu: "honda_2d_homestake_2015_numu.root"
+  numubar: "honda_2d_homestake_2015_numubar.root"
+  refflux: "/cvmfs/dune.osgstorage.org/pnfs/fnal.gov/usr/dune/persistent/stash/TaskForce_Flux/atmos/Honda_interp/honda_2d_homestake_2015_numu.root"
+
+NuOscillator:
+
+  General:
+    Verbosity: "NONE"
+    CosineZIgnored: false
+    CalculationType: "Binned"
+
+  Binned:
+    FileName: "./Inputs/ExampleAtmosphericBinning.root"
+    EnergyAxisHistName: "EnergyAxisBinning"
+    CosineZAxisHistName: "CosineZAxisBinning"
+
+  OscProbCalcerSetup:
+    ImplementationName: "CUDAProb3"
+    EarthModelFileName: "./build/_deps/cudaprob3-src/models/PREM_4layer.dat"
+    UseEarthModelSystematics: false
+    Layers: 4  
+    UseProductionHeightsAveraging: false
+    ProductionHeightsFileName: "./inputs/ProdHeightDist_E561_cZ520_N1_hbin2.5.root"
+    ProductionHeightsHistFlavourSuffixes:
+      Nue: "nue"
+      Numu: "numu"
+      Nutau: "numu"
+      Nuebar: "nuebar"
+      Numubar: "numubar"
+      Nutaubar: "numubar"
+    OscChannelMapping:
+      - Entry: "Electron:Electron"
+      - Entry: "Electron:Muon"
+      - Entry: "Electron:Tau"
+      - Entry: "Muon:Electron"
+      - Entry: "Muon:Muon"
+      - Entry: "Muon:Tau"
+      - Entry: "Tau:Electron"
+      - Entry: "Tau:Muon"
+      - Entry: "Tau:Tau"
+
+  OscillationParameters:
+    sin2_th12: 3.07e-1
+    sin2_th23: 5.28e-1
+    sin2_th13: 2.18e-2
+    dm2_12: 7.53e-5
+    dm2_23: 2.509e-3
+    delta_cp: -1.601
+    prod_h: 25

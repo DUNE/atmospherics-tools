@@ -20,21 +20,14 @@ cmessage(STATUS "ROOT_USEFILE: ${ROOT_USE_FILE}")
   include(${ROOT_USE_FILE})
 endif(ROOT_FOUND)
 
-find_package(OscLib REQUIRED $ENV{OSCLIB_INC} $ENV{OSCLIB_LIB})
-find_package(Eigen3Local REQUIRED $ENV{EIGEN_INC})
-cmessage(STATUS "EIGEN: ${OscLib_LIBS}")
-
-# Define the source and include files that should be used for the io
-# part of ERepSim.
-
 set(source_IO
 #  Reader.cxx Flux.cxx FluxManager.cxx Calculator.cxx Writer.cxx DirWriter.cxx SRWriter.cxx
-  Reader.cxx SampleManager.cxx ObservableManager.cxx AnalysisBinningManager.cxx
+  Reader.cxx Flux.cxx FluxManager.cxx SampleManager.cxx ObservableManager.cxx AnalysisBinningManager.cxx
   )
 
 set(includes_IO
 #  Reader.h Flux.h FluxManager.h Calculator.h Writer.h DirWriter.h SRWriter.h Data.h Constants.h
-  Reader.h SampleManager.h ObservableManager.h AnalysisBinningManager.h
+  Reader.h Flux.h FluxManager.h SampleManager.h ObservableManager.h AnalysisBinningManager.h
   )
 
 ############################Weightor############################
@@ -63,8 +56,8 @@ install(FILES ${includes_IO} DESTINATION include/Utils_IO)
 # work.
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-# target_include_directories(Utils_IO PUBLIC OscLib::All Eigen3::Eigen)
-target_link_libraries(Utils_IO LINK_PUBLIC OscLib::All Eigen3::Eigen
+# target_include_directories(Utils_IO PUBLIC NuOscillator)
+target_link_libraries(Utils_IO LINK_PUBLIC
                       duneanaobj::StandardRecordProxy
                       duneanaobj::StandardRecordFlat
                       duneanaobj::StandardRecord
