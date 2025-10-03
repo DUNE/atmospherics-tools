@@ -64,7 +64,7 @@ int main(int argc, char const *argv[]) {
     {Flavour::Reference, ref_file}
   };
 
-  FluxManager manager(fluxes);
+  FluxManager FlxMgr(fluxes);
 
   //============================================================================================================================================================
   AnalysisBinningManager<FLOAT_T> AnalysisBinning = AnalysisBinningManager<FLOAT_T>(Config);
@@ -73,6 +73,8 @@ int main(int argc, char const *argv[]) {
   SampleManager<FLOAT_T> Samples = SampleManager<FLOAT_T>(Config);
   Samples.SetAnalysisBinning(&AnalysisBinning);
   Samples.SetObservables(&Observables);
+  Samples.SetFluxManager(&FlxMgr);
+  Samples.SetOscillator(OscillBase);
   Samples.ReadData();
   std::cout << std::endl;
 

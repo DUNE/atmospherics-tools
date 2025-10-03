@@ -8,6 +8,8 @@
 #include "Reader.h"
 #include "ObservableManager.h"
 #include "AnalysisBinningManager.h"
+#include "FluxManager.h"
+#include "Oscillator/OscillatorFactory.h"
 
 template <typename T>
 struct Measurement {
@@ -27,9 +29,10 @@ class Sample {
 
   Reader<T>* SampleReader;
   std::vector<Measurement<T>> Measurements;
-
+  FluxManager* FlxMgr;
   AnalysisBinningManager<T>* AnalysisBinning;
   TH1D* AnalysisBinningHistogram;
+  OscillatorBase* OscillBase;
 
  public:
   Sample(YAML::Node Config);
@@ -41,6 +44,14 @@ class Sample {
   std::string GetName() {return Name;}
   TH1* GetMeasurement(int iMeas);
   TH1* GetAnalysisBinningHistogram() {return AnalysisBinningHistogram;}
+  void SetFluxManager(FluxManager* FlxMgr_) {
+    FlxMgr = FlxMgr_;
+    SampleReader->SetFluxManager(FlxMgr);
+  }
+  void SetOscillator(OscillatorBase* OscillBase_) {
+    OscillBase = OscillBase_;
+    SampleReader->SetOscillator(OscillBase);
+  }
 };
 
 template <typename T>
@@ -49,6 +60,8 @@ class SampleManager {
   std::vector<Sample<T>*> Samples;
   ObservableManager<T>* ObsManager;
   AnalysisBinningManager<T>* AnalysisBinning;
+  FluxManager* FlxMgr;
+  OscillatorBase* OscillBase;
 
   std::string OutputFileName_1D;
   std::string OutputFileName_2D;
@@ -92,6 +105,20 @@ class SampleManager {
 
     for (Sample<T>* Samp : Samples) {
       Samp->SetAnalysisBinning(AnalysisBinning_);
+    }
+  }
+
+  void SetFluxManager(FluxManager* FlxMgr_) {
+    FlxMgr = FlxMgr_;
+    for (Sample<T>* Samp : Samples) {
+      Samp->SetFluxManager(FlxMgr);
+    }
+  }
+
+  void SetOscillator(OscillatorBase* OscillBase_) {
+    OscillBase = OscillBase_;
+    for (Sample<T>* Samp : Samples) {
+      Samp->SetOscillator(OscillBase);
     }
   }
 

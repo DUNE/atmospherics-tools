@@ -28,11 +28,11 @@ Samples:
     SubDirectoryName: "cafmaker" #The CAF files are expected to contain the 'cafTree', 'meta' and 'genieEvt' TTrees. Sometimes, but not all the time, these TTrees are contained in a subdirectory (i.e. 'cafmaker')
     Colour: 1 #Colour from ROOT Colour Wheel
   - Name: "kA = 10.23e-1"
-    FilePath: "./data/Recombination_p1Sig/"
+    FilePath: "./data/Deprecated/Recombination_p1Sig/"
     SubDirectoryName: "cafmaker"
     Colour: 2 
   - Name: "kA = 8.37e-1"
-    FilePath: "./data/Recombination_n1Sig/"
+    FilePath: "./data/Deprecated/Recombination_n1Sig/"
     SubDirectoryName: "cafmaker"
     Colour: 4 
 

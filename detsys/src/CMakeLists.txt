@@ -56,8 +56,8 @@ install(FILES ${includes_IO} DESTINATION include/Utils_IO)
 # work.
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-# target_include_directories(Utils_IO PUBLIC NuOscillator)
-target_link_libraries(Utils_IO LINK_PUBLIC
+#target_include_directories(Utils_IO PUBLIC NuOscillator)
+target_link_libraries(Utils_IO LINK_PUBLIC NuOscillator
                       duneanaobj::StandardRecordProxy
                       duneanaobj::StandardRecordFlat
                       duneanaobj::StandardRecord

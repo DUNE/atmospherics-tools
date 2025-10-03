@@ -4,6 +4,7 @@
 
 template<typename T>
 Reader<T>::Reader(std::string fname, std::string subfolder) {
+  _fname = fname;
   this->SetupTree();
   this->Open(fname, subfolder);
   _data = Data<T>();
@@ -159,13 +160,42 @@ const T Reader<T>::GetEventWeight() {
 template<typename T>
 void Reader<T>::UpdateData(){
   
+  T ENu = _sr->mc.nu[0].E;
+  T CosTh = _sr->mc.nu[0].momentum.y / sqrt(pow(_sr->mc.nu[0].momentum.x,2) + pow(_sr->mc.nu[0].momentum.y,2) + pow(_sr->mc.nu[0].momentum.z,2));
+  T Phi = 60.; //Same as here: https://github.com/DUNE/atmospherics-tools/blob/41b9bb7afe248f9923aab6c3cc52900e76d2d3c1/weight_calculation/src/Calculator.cxx#L38
+  
+  Flavour nuE = (_sr->mc.nu[0].pdg > 0) ? Flavour::NuE : Flavour::NuEBar;
+  Flavour nuMu = (_sr->mc.nu[0].pdg > 0) ? Flavour::NuMu : Flavour::NuMuBar;
+
+  double nuE_flux = FlxMgr->GetFlux(nuE, ENu, CosTh, Phi);
+  double nuMu_flux = FlxMgr->GetFlux(nuMu, ENu, CosTh, Phi);
+  double ref_flux = FlxMgr->GetFlux(Flavour::Reference, ENu, CosTh, Phi);
+
+  int NuSignSwitch = (_sr->mc.nu[0].pdg > 0) ? 1 : -1;
+  int NuOscFlavIndex;
+  switch(abs(_sr->mc.nu[0].pdg)) {
+  case 12:
+    NuOscFlavIndex = 1; break;
+  case 14:
+    NuOscFlavIndex = 2; break;
+  case 16:
+    NuOscFlavIndex = 3; break;
+  default:
+    throw;
+  }
+		      
+  T Oscillation_FromNumu = OscillBase->ReturnOscillationProbability(2*NuSignSwitch,NuOscFlavIndex*NuSignSwitch,ENu,CosTh);
+  T Oscillation_FromNuE  = OscillBase->ReturnOscillationProbability(1*NuSignSwitch,NuOscFlavIndex*NuSignSwitch,ENu,CosTh);
+
+  _data.weight = (_sr->mc.nu[0].genweight/ref_flux/_POT*(400.0*3600.0*24.0*365.0/1.71958)) * (Oscillation_FromNuE*nuE_flux + Oscillation_FromNumu*nuMu_flux);
+  //_data.weight = 1.0;
+
   _data.AnalysisBinIndex = -1;
   _data.ev = _sr->mc.nu[0].E;
   _data.NuMomX = _sr->mc.nu[0].momentum.x;
   _data.NuMomY = _sr->mc.nu[0].momentum.y;
   _data.NuMomZ = _sr->mc.nu[0].momentum.z;
   _data.nuPDG = _sr->mc.nu[0].pdg;
-  _data.weight = _sr->mc.nu[0].genweight;
   _data.mode = _sr->mc.nu[0].mode;
 
   TVector3 TrueNuMomentumVector = (TVector3(_sr->mc.nu[0].momentum.X(),_sr->mc.nu[0].momentum.Y(),_sr->mc.nu[0].momentum.Z())).Unit();

@@ -14,6 +14,8 @@
 #include "duneanaobj/StandardRecord/StandardRecord.h"
 
 #include "AnalysisBinningManager.h"
+#include "FluxManager.h"
+#include "Oscillator/OscillatorFactory.h"
 
 template <typename T>
 class Reader {
@@ -29,8 +31,10 @@ class Reader {
   int _entry = -1;
   //caf::StandardRecordProxy* _sr = nullptr;
   caf::StandardRecord* _sr = nullptr;
-  
+
+  FluxManager* FlxMgr;
   AnalysisBinningManager<T>* AnalysisBinning;
+  OscillatorBase* OscillBase;
 
   void Open(std::string fname, std::string subfolder);
   void SetupTree();
@@ -51,6 +55,8 @@ class Reader {
   TFile* GetFile();
   int GetNentries();
   void SetAnalysisBinning(AnalysisBinningManager<T>* AnalysisBinning_) {AnalysisBinning = AnalysisBinning_;}
+  void SetOscillator(OscillatorBase* OscillBase_) {OscillBase = OscillBase_;}
+  void SetFluxManager(FluxManager* FlxMgr_) {FlxMgr = FlxMgr_;}
   const T ReturnKinematicParameter(int Par);
   const T GetEventWeight();
 };
