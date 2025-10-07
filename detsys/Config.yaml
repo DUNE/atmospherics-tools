@@ -24,7 +24,7 @@ DrawOptions:
 
 Samples:
   - Name: "kA = 9.3e-1 (Nom)" #Sample Identifier name
-    FilePath: "./data/Nominal" #Path to directory which contains the set of CAF files to use for this sample. It will grab all "*.root" files within that directory
+    FilePath: "./data/Deprecated/Nominal" #Path to directory which contains the set of CAF files to use for this sample. It will grab all "*.root" files within that directory
     SubDirectoryName: "cafmaker" #The CAF files are expected to contain the 'cafTree', 'meta' and 'genieEvt' TTrees. Sometimes, but not all the time, these TTrees are contained in a subdirectory (i.e. 'cafmaker')
     Colour: 1 #Colour from ROOT Colour Wheel
   - Name: "kA = 10.23e-1"

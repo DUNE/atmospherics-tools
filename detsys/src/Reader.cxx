@@ -128,6 +128,11 @@ const Data<T>& Reader<T>::GetData(){
   return _data;
 }
 
+template <typename T, typename A>
+int arg_max(std::vector<T, A> const& vec) {
+  return static_cast<int>(std::distance(vec.begin(), max_element(vec.begin(), vec.end())));
+}
+
 template<typename T>
 const T Reader<T>::ReturnKinematicParameter(int Par) {
   switch (Par) {
@@ -210,17 +215,27 @@ void Reader<T>::UpdateData(){
     return;
   }
   
-  _data.Selection = Sel::SelNC;
   _data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.numu;
   _data.cvn_nue = _sr->common.ixn.pandora[0].nuhyp.cvn.nue;
 
+  /*
+  SelNuE = 0,
+  SelNuMu = 1,
+  SelNC = 2,
+  Unsel = 3,
+
+  std::vector<T> CVNScores = {_sr->common.ixn.pandora[0].nuhyp.cvn.nue, _sr->common.ixn.pandora[0].nuhyp.cvn.numu, _sr->common.ixn.pandora[0].nuhyp.cvn.nc};
+  _data.Selection = arg_max(CVNScores);
+  */
+
+  _data.Selection = Sel::SelNC;
   if(_sr->common.ixn.pandora[0].nuhyp.cvn.numu > cvn_numu){
     _data.Selection = Sel::SelNuMu;
   }
   else if(_sr->common.ixn.pandora[0].nuhyp.cvn.nue > cvn_nue){
     _data.Selection = Sel::SelNuE;
   }
-  
+
   if (_data.Selection == Sel::SelNC) {
     _data.erec = _sr->common.ixn.pandora[0].Enu.calo;
     _data.RecoCZ = -_sr->common.ixn.pandora[0].dir.heshw.y;
