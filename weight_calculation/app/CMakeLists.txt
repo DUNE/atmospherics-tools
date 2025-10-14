@@ -35,5 +35,13 @@ target_include_directories(split_channels
   $ENV{SRPROXY_INC}
 )
 
-install(TARGETS weightor split_channels RUNTIME DESTINATION bin)
+add_executable(michele_splitting michele_splitting.cxx)
+target_link_libraries(michele_splitting
+  LINK_PUBLIC WeightorIO ROOT::EG ${ROOT_LIBRARIES} argparse GENIE3::All)
+target_include_directories(michele_splitting
+  PRIVATE
+  $ENV{SRPROXY_INC}
+)
+
+install(TARGETS weightor split_channels michele_splitting RUNTIME DESTINATION bin)
 
