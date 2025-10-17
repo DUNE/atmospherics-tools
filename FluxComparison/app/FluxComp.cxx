@@ -10,12 +10,12 @@
 #include "TSpline.h"
 #include "TGraph.h"
 
-TH2D* InterpolateHistogram(TH2* ModelHistogram, std::vector<double> EnergyBinning, std::vector<double> CosineZBinning, std::string HistName="") {
+TH2D* InterpolateHistogram(TH2* ModelHistogram, TH2* TemplateHistogram,  std::string HistName="") {
   if (HistName == "") {
     HistName = ModelHistogram->GetName();
   }
   
-  TH2D* InterpHistogram = new TH2D((HistName+"_Interp").c_str(),ModelHistogram->GetTitle(),EnergyBinning.size()-1,EnergyBinning.data(),CosineZBinning.size()-1,CosineZBinning.data());
+  TH2D* InterpHistogram = (TH2D*)TemplateHistogram->Clone((HistName+"_Interp").c_str());
   for (int xBin=1;xBin<=InterpHistogram->GetNbinsX();xBin++) {
     for (int yBin=1;yBin<=InterpHistogram->GetNbinsY();yBin++) {
       double XVal = InterpHistogram->GetXaxis()->GetBinCenter(xBin);
@@ -36,12 +36,22 @@ TH2D* InterpolateHistogram(TH2* ModelHistogram, std::vector<double> EnergyBinnin
 
 TGraph* TSpline3_to_TGraph(TSpline3* spline){
   // Convert TSpline3->TGraph
-  int nEvals = 100;
+  int nEvals = 30*spline->GetNp();
   std::vector<double> x_points(nEvals+1);
   std::vector<double> y_points(nEvals+1);
 
-  double SplineMin = 0;
-  double SplineMax = 2;
+  double SplineMin = 1e8;
+  double SplineMax = -1e8;
+
+  int nKnots = spline->GetNp();
+  for (int iKnot=0;iKnot<nKnots;iKnot++) {
+    double x = -999;
+    double y = -999;
+    spline->GetKnot(iKnot, x, y);
+
+    if (x < SplineMin) {SplineMin = x;}
+    if (x > SplineMax) {SplineMax = x;}
+  }
   
   for(int iEval=0;iEval<=nEvals;iEval++){
     double x = SplineMin + ((double)iEval/(double)nEvals) * (SplineMax-SplineMin);
@@ -57,10 +67,9 @@ TGraph* TSpline3_to_TGraph(TSpline3* spline){
 
 int main(int argc, char const *argv[]) {
   gStyle->SetPaintTextFormat("4.3f");
-  
   gStyle->SetOptStat(false);
   
-  //================================================================================
+  //================================================================================================================================================================
   //Grab things from the config
 
   std::string TwoDRatioOutputName = "2DComparison.pdf";
@@ -83,7 +92,6 @@ int main(int argc, char const *argv[]) {
     std::cerr << "No FluxModels to compare - Fix your YAML config" << std::endl;
     throw;
   }
-  std::vector< std::string > ModelsFound;
 
   std::string NominalFluxModel = Config["General"]["Nominal"].as<std::string>();
   bool  FoundNominalModel = false;
@@ -102,15 +110,17 @@ int main(int argc, char const *argv[]) {
 
   std::vector<double> ComparisonBinning_Energy = Config["General"]["ComparisonBinning_Energy"].as< std::vector<double> >();
   std::vector<double> ComparisonBinning_CosineZ = Config["General"]["ComparisonBinning_CosineZ"].as< std::vector<double> >();
-
+  TH2D* InterpTemplateHistogram = new TH2D("HistogramTemplate_Interp","Template Histogram;Energy (GeV);Cosine Z",ComparisonBinning_Energy.size()-1,ComparisonBinning_Energy.data(),ComparisonBinning_CosineZ.size()-1,ComparisonBinning_CosineZ.data());
+  
   TCanvas* Canv = new TCanvas("Canv","");
   Canv->SetLogx(true);
   Canv->SetRightMargin(0.2);
-  
-  //================================================================================
+
+  //================================================================================================================================================================
   //Build the flux predictions
   
   std::vector<FluxReader*> Fluxes;
+  std::vector< std::string > ModelsFound;
   for (auto const &Model : Config["FluxModels"]) {
 
     std::string ModelName = Model["ModelName"].as<std::string>();
@@ -160,7 +170,7 @@ int main(int argc, char const *argv[]) {
   for (int iFlav=0;iFlav<nFlavs;iFlav++) {
     SingleFlavourFluxHists[iFlav].resize(Fluxes.size());
     for (size_t iModel=0;iModel<Fluxes.size();iModel++) {
-      SingleFlavourFluxHists[iFlav][iModel] = InterpolateHistogram((TH2*)(Fluxes[iModel]->ReturnEnergyCosineZHists())[iFlav], ComparisonBinning_Energy, ComparisonBinning_CosineZ);
+      SingleFlavourFluxHists[iFlav][iModel] = InterpolateHistogram((TH2*)(Fluxes[iModel]->ReturnEnergyCosineZHists())[iFlav], InterpTemplateHistogram);
       SingleFlavourFluxHists[iFlav][iModel]->SetTitle((std::string(SingleFlavourFluxHists[iFlav][iModel]->GetTitle())+" Interpolated "+Fluxes[iModel]->GetModelName()).c_str());
       
       SingleFlavourFluxHists[iFlav][iModel]->Draw("COLZ");
@@ -184,7 +194,7 @@ int main(int argc, char const *argv[]) {
   Canv->Print((TwoDRatioOutputName+"[").c_str());
   for (int iFlav=0;iFlav<nFlavs;iFlav++) {
     for (size_t iModel=0;iModel<Fluxes.size();iModel++) {
-      RatioFluxHists[iFlav][iModel]->SetTitle(("Ratio of Interpolated "+Fluxes[iModel]->GetModelName()+" to Interpolated "+NominalFluxModel+" : "+Fluxes[0]->GetFlavourName(iFlav)).c_str());
+      RatioFluxHists[iFlav][iModel]->SetTitle(("Ratio of Interpolated "+Fluxes[iModel]->GetModelName()+" to Interpolated "+NominalFluxModel+" : "+FlavourNames.at(iFlav)).c_str());
       RatioFluxHists[iFlav][iModel]->GetZaxis()->SetTitle("Ratio");
       
       RatioFluxHists[iFlav][iModel]->Draw("COLZ");
@@ -196,13 +206,16 @@ int main(int argc, char const *argv[]) {
   //================================================================================================================================================================
   //Compare the flavour ratio predictions
 
+  //================================================================================
+  //Compare the flux predictions
+  
   std::vector< std::vector<TH2*> > FlavourRatioFluxHists(nFlavRatios);
 
   Canv->Print((FlavourRatioInterpOutputName+"[").c_str());
   for (int iFlav=0;iFlav<nFlavRatios;iFlav++) {
     FlavourRatioFluxHists[iFlav].resize(Fluxes.size());
     for (size_t iModel=0;iModel<Fluxes.size();iModel++) {
-      FlavourRatioFluxHists[iFlav][iModel] = InterpolateHistogram((TH2*)(Fluxes[iModel]->ReturnFlavourRatioHists())[iFlav], ComparisonBinning_Energy, ComparisonBinning_CosineZ);
+      FlavourRatioFluxHists[iFlav][iModel] = InterpolateHistogram((TH2*)(Fluxes[iModel]->ReturnFlavourRatioHists())[iFlav], InterpTemplateHistogram);
       FlavourRatioFluxHists[iFlav][iModel]->Smooth();
       FlavourRatioFluxHists[iFlav][iModel]->SetTitle((std::string(FlavourRatioFluxHists[iFlav][iModel]->GetTitle())+" Interpolated "+Fluxes[iModel]->GetModelName()).c_str());
 
@@ -227,7 +240,7 @@ int main(int argc, char const *argv[]) {
   Canv->Print((TwoDFlavourRatioComparisons+"[").c_str());
   for (int iFlav=0;iFlav<nFlavRatios;iFlav++) {
     for (size_t iModel=0;iModel<Fluxes.size();iModel++) {
-      RatioFlavourRatioFluxHists[iFlav][iModel]->SetTitle(("Ratio of Interpolated "+Fluxes[iModel]->GetModelName()+" to Interpolated "+NominalFluxModel+" : "+Fluxes[0]->GetFlavourRatioName(iFlav)).c_str());
+      RatioFlavourRatioFluxHists[iFlav][iModel]->SetTitle(("Ratio of Interpolated "+Fluxes[iModel]->GetModelName()+" to Interpolated "+NominalFluxModel+" : "+RatioFlavourNames.at(iFlav)).c_str());
       RatioFlavourRatioFluxHists[iFlav][iModel]->GetZaxis()->SetTitle("Ratio");
       
       RatioFlavourRatioFluxHists[iFlav][iModel]->Draw("COLZ TEXT0");
@@ -240,15 +253,18 @@ int main(int argc, char const *argv[]) {
   //Build the Splines
 
   std::vector<FLOAT_T> ModelSplineIndex(Fluxes.size());
+  std::vector<FLOAT_T> SplineXVals(Fluxes.size());
   int Counter = 0;
 
   //First set SplineXVal==0 as NominalModel
   ModelSplineIndex[Counter] = NominalFluxIndex;
+  SplineXVals[Counter] = Counter;
   Counter += 1;
   //Now count the others
   for (size_t iModel=0;iModel<Fluxes.size();iModel++) {
     if ((int)iModel == NominalFluxIndex) continue;
     ModelSplineIndex[Counter] = iModel;
+    SplineXVals[Counter] = Counter;
     Counter += 1;
   }
 
@@ -258,31 +274,31 @@ int main(int argc, char const *argv[]) {
   }
 
   Canv->SetLogx(false);
+
+  TLegend* Leg = new TLegend(0.8,0.9-0.05*Fluxes.size(),0.99,0.9);
+  Leg->SetTextSize(0.018);
+  for (size_t iModel=0;iModel<Fluxes.size();iModel++) {
+    Leg->AddEntry((TObject*)0,(Form("%4.1f = ",SplineXVals[iModel])+Fluxes[ModelSplineIndex[iModel]]->GetModelName()).c_str(),"");
+  }
   
   Canv->Print((SplineOutputName+"[").c_str());  
   for (int iFlav=0;iFlav<nFlavRatios;iFlav++) {
-    for (int xBin=1;xBin<=RatioFlavourRatioFluxHists[iFlav][0]->GetNbinsX();xBin++) {
-      for (int yBin=1;yBin<=RatioFlavourRatioFluxHists[iFlav][0]->GetNbinsY();yBin++) {
+    for (int xBin=1;xBin<=InterpTemplateHistogram->GetNbinsX();xBin++) {
+      for (int yBin=1;yBin<=InterpTemplateHistogram->GetNbinsY();yBin++) {
 
-	std::vector<FLOAT_T> SplineXVals(Fluxes.size());
+
 	std::vector<FLOAT_T> SplineYVals(Fluxes.size());
 	for (size_t iModel=0;iModel<Fluxes.size();iModel++) {
-	  SplineXVals[iModel] = iModel;
 	  SplineYVals[iModel] = RatioFlavourRatioFluxHists[iFlav][ModelSplineIndex[iModel]]->GetBinContent(xBin,yBin);
 	}
 
-	/*
-	for (size_t iModel=0;iModel<Fluxes.size();iModel++) {
-	  std::cout << SplineXVals[iModel] << " " << SplineYVals[iModel] << std::endl;
-	}
-	*/
-	
 	TSpline3* Spline = new TSpline3(Form("Syst_%i_XBin_%i_YBin_%i",iFlav,xBin,yBin),SplineXVals.data(),SplineYVals.data(),Fluxes.size());
 	TGraph* Graph = TSpline3_to_TGraph(Spline);
-	Graph->SetTitle(Spline->GetTitle());
+	Graph->SetTitle((std::string(Spline->GetTitle())+";Dial Value;Weight").c_str());
 
 	Canv->Clear();
 	Graph->Draw();
+	Leg->Draw("SAME");
 	Canv->Print((SplineOutputName).c_str());
       }
     }

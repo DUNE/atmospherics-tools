@@ -15,7 +15,7 @@ HondaFluxReader::HondaFluxReader(YAML::Node Config) : FluxReader(Config) {
 }
 
 std::vector< std::vector< std::vector<FLOAT_T> > > HondaFluxReader::ReadFlux() {
-  std::vector< std::vector< std::vector<FLOAT_T> > > ReturnVec = std::vector< std::vector< std::vector<FLOAT_T> > >(GetNFlavours());
+  std::vector< std::vector< std::vector<FLOAT_T> > > ReturnVec = std::vector< std::vector< std::vector<FLOAT_T> > >(nFlavs);
 
   FLOAT_T Energy = -999;
   FLOAT_T CosineZ = -999;

@@ -58,7 +58,7 @@ FluxReader::FluxReader(YAML::Node Config_) {
   FluxCaption = Config["FluxCaption"].as<std::string>();
   std::string HistAxisCaptions = Config["HistAxisCaptions"].as<std::string>();
   
-  for (int iFlav=0;iFlav<nFlavours;iFlav++) {
+  for (int iFlav=0;iFlav<nFlavs;iFlav++) {
     std::string HistName = ModelName+"_"+FlavourNames[iFlav];    
     std::string HistTitle = FlavourNames[iFlav]+";"+HistAxisCaptions;
 
@@ -85,7 +85,7 @@ void FluxReader::InitialiseFlux() {
     throw;
   }
   
-  for (int iFlav=0;iFlav<nFlavours;iFlav++) {
+  for (int iFlav=0;iFlav<nFlavs;iFlav++) {
     if (FluxPoints[iFlav].size()==0) {
       std::cerr << "No Flux points found for Model:" << ModelName << std::endl;
       throw;
@@ -147,14 +147,14 @@ void FluxReader::InitialiseFlux() {
 
 void FluxReader::Build2DPlots() {
   if (MeasDimension == 2) {
-    for (int iFlav=0;iFlav<nFlavours;iFlav++) {
+    for (int iFlav=0;iFlav<nFlavs;iFlav++) {
       EnergyCosineZHists[iFlav] = (TH1*)(FluxHists[iFlav]->Clone());
       if (Smooth) {
 	EnergyCosineZHists[iFlav]->Smooth();
       }
     }
   } else if (MeasDimension == 3) {
-    for (int iFlav=0;iFlav<nFlavours;iFlav++) {
+    for (int iFlav=0;iFlav<nFlavs;iFlav++) {
       EnergyCosineZHists[iFlav] = ((TH3*)FluxHists[iFlav])->Project3D("yx");
 
       FLOAT_T Max = -1;
@@ -180,11 +180,9 @@ void FluxReader::Build2DPlots() {
 void FluxReader::BuildFlavourRatioPlots() {
   for (int iFlavRatio=0;iFlavRatio<nFlavRatios;iFlavRatio++) {
     FlavourRatioHists[iFlavRatio] = static_cast<TH1*>(EnergyCosineZHists[0]->Clone((ModelName+"_"+RatioFlavourNames[iFlavRatio]).c_str()));
+    FlavourRatioHists[iFlavRatio]->SetTitle(RatioFlavourNames[iFlavRatio].c_str());
     FlavourRatioHists[iFlavRatio]->Reset();
   }
-  FlavourRatioHists[Ratio_Total]->SetTitle("(NuM+ANuM)/(NuE+ANuE)");
-  FlavourRatioHists[Ratio_NuM]->SetTitle("(NuM/ANuM)");
-  FlavourRatioHists[Ratio_NuE]->SetTitle("(NuE/ANuE)");
 
   TH2* Hist;
   for (int xBin=1;xBin<=((TH2*)FlavourRatioHists[0])->GetNbinsX();xBin++) {
@@ -231,7 +229,7 @@ void FluxReader::Plot2DFlux(std::string OutputName, std::string DrawOpts) {
   Canv->SetRightMargin(0.2);
   Canv->Print((OutputName+"[").c_str());
 
-  for (int iFlav=0;iFlav<nFlavours;iFlav++) {
+  for (int iFlav=0;iFlav<nFlavs;iFlav++) {
     EnergyCosineZHists[iFlav]->SetTitle(FluxHists[iFlav]->GetTitle());
     EnergyCosineZHists[iFlav]->SetStats(false);      
     EnergyCosineZHists[iFlav]->GetZaxis()->SetTitle(FluxCaption.c_str());

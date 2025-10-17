@@ -23,11 +23,11 @@ inline std::vector<std::string> SplitLine(const std::string& str) {
 }
 
 enum Flavours{
-  NuE,
-  NuM,
-  ANuE,
-  ANuM,
-  nFlavs
+  NuE = 0,
+  NuM = 1,
+  ANuE = 2,
+  ANuM = 3,
+  nFlavs = 4
 };
 
 enum FlavRatios{
@@ -37,10 +37,12 @@ enum FlavRatios{
   nFlavRatios
 };
 
+const std::vector< std::string > FlavourNames = {"NuE","NuM","ANuE","ANuM"};
+const std::vector< std::string > RatioFlavourNames = {"(NuM+ANuM)/(NuE+ANuE)","NuM/ANuM","NuE/ANuE"};
+
 class FluxReader {
 
 private:
-
   std::string ModelName;
   std::vector<FLOAT_T> EnergyBinEdges;
   std::vector<FLOAT_T> CosineZBinEdges;
@@ -57,14 +59,6 @@ private:
   bool Smooth = false;
   
 protected:
-  const int NuE = 0;
-  const int NuM = 1;
-  const int ANuE = 2;
-  const int ANuM = 3;
-  const int nFlavours = 4;
-  const std::vector< std::string > FlavourNames = {"NuE","NuM","ANuE","ANuM"};
-  const std::vector< std::string > RatioFlavourNames = {"(NuM+ANuM)/(NuE+ANuE)","NuM/ANuM","NuE/ANuE"};
-  
   int MeasDimension;
   
   FluxReader(YAML::Node Config);
@@ -73,19 +67,15 @@ protected:
   void Build2DPlots();
   void BuildFlavourRatioPlots();
   
-  std::vector<TH1*> FluxHists = std::vector<TH1*>(nFlavours);
-  std::vector<TH1*> EnergyCosineZHists = std::vector<TH1*>(nFlavours);
+  std::vector<TH1*> FluxHists = std::vector<TH1*>(nFlavs);
+  std::vector<TH1*> EnergyCosineZHists = std::vector<TH1*>(nFlavs);
   std::vector<TH1*> FlavourRatioHists = std::vector<TH1*>(nFlavRatios);
   YAML::Node Config;
   
 public:
+
   void Plot2DFlux(std::string OutputName, std::string DrawOpts);
-
   std::string GetModelName() {return ModelName;}
-  std::string GetFlavourName(int Flav) {return FlavourNames.at(Flav);}
-  std::string GetFlavourRatioName(int Flav) {return RatioFlavourNames.at(Flav);}
-  int GetNFlavours() {return nFlavours;}
-
   std::vector<TH1*> ReturnEnergyCosineZHists() {return EnergyCosineZHists;}
   std::vector<TH1*> ReturnFlavourRatioHists() {return FlavourRatioHists;}
 };

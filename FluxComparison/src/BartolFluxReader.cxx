@@ -5,8 +5,8 @@
 
 BartolFluxReader::BartolFluxReader(YAML::Node Config) : FluxReader(Config) {
   std::cout << "Finding file path names:" << std::endl;
-  for (int iFlav=0;iFlav<GetNFlavours();iFlav++) {
-    std::string FlavourName = GetFlavourName(iFlav);
+  for (int iFlav=0;iFlav<nFlavs;iFlav++) {
+    std::string FlavourName = FlavourNames.at(iFlav);
     if (!Config[FlavourName]) {
       std::cerr << "Did not find " << FlavourName << " node in Config" << std::endl;
       throw;
@@ -22,10 +22,10 @@ BartolFluxReader::BartolFluxReader(YAML::Node Config) : FluxReader(Config) {
 std::vector< std::vector< std::vector<FLOAT_T> > > BartolFluxReader::ReadFlux() {
   std::vector< std::vector< std::vector<FLOAT_T> > > ReturnVec;
 
-  for (int iFlav=0;iFlav<GetNFlavours();iFlav++) {
+  for (int iFlav=0;iFlav<nFlavs;iFlav++) {
     std::vector< std::vector<FLOAT_T> > FlavourVec;
       
-    std::string FlavourName = GetFlavourName(iFlav);
+    std::string FlavourName = FlavourNames.at(iFlav);
     std::string FilePath = FilePathMap[FlavourName];
     
     std::cout << "\tReading BARTOL flux (" << FlavourName << ") : " << FilePath << std::endl;
