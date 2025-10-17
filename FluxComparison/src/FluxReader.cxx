@@ -141,6 +141,7 @@ void FluxReader::InitialiseFlux() {
   }
 
   Build2DPlots();
+  BuildFlavourRatioPlots();
   std::cout << std::endl;
 }
 
@@ -176,6 +177,53 @@ void FluxReader::Build2DPlots() {
   }
 }
 
+void FluxReader::BuildFlavourRatioPlots() {
+  for (int iFlavRatio=0;iFlavRatio<nFlavRatios;iFlavRatio++) {
+    FlavourRatioHists[iFlavRatio] = static_cast<TH1*>(EnergyCosineZHists[0]->Clone((ModelName+"_"+RatioFlavourNames[iFlavRatio]).c_str()));
+    FlavourRatioHists[iFlavRatio]->Reset();
+  }
+  FlavourRatioHists[Ratio_Total]->SetTitle("(NuM+ANuM)/(NuE+ANuE)");
+  FlavourRatioHists[Ratio_NuM]->SetTitle("(NuM/ANuM)");
+  FlavourRatioHists[Ratio_NuE]->SetTitle("(NuE/ANuE)");
+
+  TH2* Hist;
+  for (int xBin=1;xBin<=((TH2*)FlavourRatioHists[0])->GetNbinsX();xBin++) {
+    for (int yBin=1;yBin<=((TH2*)FlavourRatioHists[0])->GetNbinsY();yBin++) {
+      FLOAT_T NuEBinContent = EnergyCosineZHists[NuE]->GetBinContent(xBin,yBin);
+      FLOAT_T NuMBinContent = EnergyCosineZHists[NuM]->GetBinContent(xBin,yBin);
+      FLOAT_T ANuEBinContent = EnergyCosineZHists[ANuE]->GetBinContent(xBin,yBin);
+      FLOAT_T ANuMBinContent = EnergyCosineZHists[ANuM]->GetBinContent(xBin,yBin);
+      
+      FLOAT_T Ratio_T = (NuMBinContent+ANuMBinContent)/(NuEBinContent+ANuEBinContent);
+      FLOAT_T Ratio_M = (NuMBinContent/ANuMBinContent);
+      FLOAT_T Ratio_E = (NuEBinContent/ANuEBinContent);
+      
+      Hist = (TH2*)FlavourRatioHists[Ratio_Total];
+      Hist->SetBinContent(xBin,yBin,Ratio_T);
+      
+      Hist = (TH2*)FlavourRatioHists[Ratio_NuM];
+      Hist->SetBinContent(xBin,yBin,Ratio_M);
+
+      Hist = (TH2*)FlavourRatioHists[Ratio_NuE];
+      Hist->SetBinContent(xBin,yBin,Ratio_E);
+    }
+  }
+
+  for (int iFlavRatio=0;iFlavRatio<nFlavRatios;iFlavRatio++) {
+    Hist = (TH2*)FlavourRatioHists[iFlavRatio];
+    
+    FLOAT_T Min = 1e8;
+    FLOAT_T Max = -1e8;
+    for (int xBin=1;xBin<=Hist->GetNbinsX();xBin++) {
+      for (int yBin=1;yBin<=Hist->GetNbinsY();yBin++) {
+	if (Hist->GetBinContent(xBin,yBin) > Max) {Max = Hist->GetBinContent(xBin,yBin);}
+	if (Hist->GetBinContent(xBin,yBin) < Min) {Min = Hist->GetBinContent(xBin,yBin);}
+      }
+    }
+    Hist->GetZaxis()->SetRangeUser(Min,Max);
+  }
+}
+
 void FluxReader::Plot2DFlux(std::string OutputName, std::string DrawOpts) {
   TCanvas* Canv = new TCanvas;
   Canv->SetLogx();
@@ -192,6 +240,16 @@ void FluxReader::Plot2DFlux(std::string OutputName, std::string DrawOpts) {
     EnergyCosineZHists[iFlav]->SetLineColor(LineColor);
     EnergyCosineZHists[iFlav]->SetLineStyle(LineStyle);
     
+    Canv->Print(OutputName.c_str());
+  }
+
+  for (int iFlavRatio=0;iFlavRatio<nFlavRatios;iFlavRatio++) {
+    FlavourRatioHists[iFlavRatio]->SetStats(false);
+    FlavourRatioHists[iFlavRatio]->GetZaxis()->SetTitle(FluxCaption.c_str());
+    FlavourRatioHists[iFlavRatio]->Draw(DrawOpts.c_str());
+    FlavourRatioHists[iFlavRatio]->SetLineColor(LineColor);
+    FlavourRatioHists[iFlavRatio]->SetLineStyle(LineStyle);
+
     Canv->Print(OutputName.c_str());
   }
   

@@ -30,6 +30,13 @@ enum Flavours{
   nFlavs
 };
 
+enum FlavRatios{
+  Ratio_Total, // (NuMu+ANuMu)/(NuE+ANuE)
+  Ratio_NuE, // NuE/ANuE
+  Ratio_NuM, // NuMu/ANuMu
+  nFlavRatios
+};
+
 class FluxReader {
 
 private:
@@ -56,6 +63,7 @@ protected:
   const int ANuM = 3;
   const int nFlavours = 4;
   const std::vector< std::string > FlavourNames = {"NuE","NuM","ANuE","ANuM"};
+  const std::vector< std::string > RatioFlavourNames = {"(NuM+ANuM)/(NuE+ANuE)","NuM/ANuM","NuE/ANuE"};
   
   int MeasDimension;
   
@@ -63,9 +71,11 @@ protected:
   void InitialiseFlux();
   virtual std::vector< std::vector< std::vector<FLOAT_T> > > ReadFlux() = 0;
   void Build2DPlots();
+  void BuildFlavourRatioPlots();
   
   std::vector<TH1*> FluxHists = std::vector<TH1*>(nFlavours);
   std::vector<TH1*> EnergyCosineZHists = std::vector<TH1*>(nFlavours);
+  std::vector<TH1*> FlavourRatioHists = std::vector<TH1*>(nFlavRatios);
   YAML::Node Config;
   
 public:
@@ -73,6 +83,9 @@ public:
 
   std::string GetModelName() {return ModelName;}
   std::string GetFlavourName(int Flav) {return FlavourNames.at(Flav);}
+  std::string GetFlavourRatioName(int Flav) {return RatioFlavourNames.at(Flav);}
   int GetNFlavours() {return nFlavours;}
+
   std::vector<TH1*> ReturnEnergyCosineZHists() {return EnergyCosineZHists;}
+  std::vector<TH1*> ReturnFlavourRatioHists() {return FlavourRatioHists;}
 };
