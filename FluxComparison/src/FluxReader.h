@@ -39,6 +39,7 @@ enum FlavRatios{
 
 const std::vector< std::string > FlavourNames = {"NuE","NuM","ANuE","ANuM"};
 const std::vector< std::string > RatioFlavourNames = {"(NuM+ANuM)/(NuE+ANuE)","NuM/ANuM","NuE/ANuE"};
+const std::vector< std::string > RatioFlavourShortNames = {"TotalRatio","NuMRatio","NuERatio"};
 
 class FluxReader {
 

@@ -9,6 +9,7 @@
 #include "TLatex.h"
 #include "TSpline.h"
 #include "TGraph.h"
+#include "TFile.h"
 
 TH2D* InterpolateHistogram(TH2* ModelHistogram, TH2* TemplateHistogram,  std::string HistName="") {
   if (HistName == "") {
@@ -78,6 +79,7 @@ int main(int argc, char const *argv[]) {
   std::string FlavourRatioInterpOutputName = "FlavourRatioInterpOutput.pdf";
   std::string TwoDFlavourRatioComparisons = "2DFlavourRatioComparisons.pdf";
   std::string SplineOutputName = "Splines.pdf";
+  std::string SplineFileOutputName = "AtmosphericFluxShapeSplines.root";
   
   if (argc != 2) {
     std::cout << "Usage: ./FluxComp Config.yaml" << std::endl;
@@ -273,14 +275,17 @@ int main(int argc, char const *argv[]) {
     std::cout << "\t" << iModel << " = " << Fluxes[ModelSplineIndex[iModel]]->GetModelName() << std::endl;
   }
 
-  Canv->SetLogx(false);
+  TFile* File = TFile::Open(SplineFileOutputName.c_str(),"RECREATE");
+  File->cd();
+  InterpTemplateHistogram->Write();
 
   TLegend* Leg = new TLegend(0.8,0.9-0.05*Fluxes.size(),0.99,0.9);
   Leg->SetTextSize(0.018);
   for (size_t iModel=0;iModel<Fluxes.size();iModel++) {
     Leg->AddEntry((TObject*)0,(Form("%4.1f = ",SplineXVals[iModel])+Fluxes[ModelSplineIndex[iModel]]->GetModelName()).c_str(),"");
   }
-  
+
+  Canv->SetLogx(false);
   Canv->Print((SplineOutputName+"[").c_str());  
   for (int iFlav=0;iFlav<nFlavRatios;iFlav++) {
     for (int xBin=1;xBin<=InterpTemplateHistogram->GetNbinsX();xBin++) {
@@ -300,11 +305,14 @@ int main(int argc, char const *argv[]) {
 	Graph->Draw();
 	Leg->Draw("SAME");
 	Canv->Print((SplineOutputName).c_str());
+
+	Spline->Write(Form("Syst_%s_XBin_%i_YBin_%i",RatioFlavourShortNames[iFlav].c_str(),xBin,yBin));
       }
     }
     
   }
   Canv->Print((SplineOutputName+"]").c_str());
+  File->Write();
 
   return 0;
 }
