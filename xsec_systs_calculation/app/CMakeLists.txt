@@ -1,6 +1,7 @@
 LIST(APPEND TARGETS_TO_BUILD 
 UpdateReweight
 ReadCAF
+PrintWeights
 )
 
 foreach(targ ${TARGETS_TO_BUILD})
