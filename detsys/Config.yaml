@@ -24,17 +24,29 @@ DrawOptions:
 
 Samples:
   - Name: "kA = 9.3e-1 (Nom)" #Sample Identifier name
-    FilePath: "./data/Deprecated/Nominal" #Path to directory which contains the set of CAF files to use for this sample. It will grab all "*.root" files within that directory
+    FilePath: "./data/Nominal" #Path to directory which contains the set of CAF files to use for this sample. It will grab all "*.root" files within that directory
     SubDirectoryName: "cafmaker" #The CAF files are expected to contain the 'cafTree', 'meta' and 'genieEvt' TTrees. Sometimes, but not all the time, these TTrees are contained in a subdirectory (i.e. 'cafmaker')
     Colour: 1 #Colour from ROOT Colour Wheel
-  - Name: "kA = 10.23e-1"
-    FilePath: "./data/Deprecated/Recombination_p1Sig/"
+  - Name: "kA = 9.3e-1 (Dep)"
+    FilePath: "./data/Deprecated/Nominal/"
     SubDirectoryName: "cafmaker"
     Colour: 2 
-  - Name: "kA = 8.37e-1"
-    FilePath: "./data/Deprecated/Recombination_n1Sig/"
-    SubDirectoryName: "cafmaker"
-    Colour: 4 
+#  - Name: "kA = 8.37e-1 (Dep)"
+#    FilePath: "./data/Recombination_n1Sig/"
+#    SubDirectoryName: "cafmaker"
+#    Colour: 4
+#  - Name: "kA = 9.3e-1 (Nom)"
+#    FilePath: "./data/Nominal"
+#    SubDirectoryName: "cafmaker"
+#    Color: 1
+#  - Name: "kA = 10.23e-1"
+#    FilePath: "./data/Recombination_p1Sig/"
+#    SubDirectoryName: "cafmaker"
+#    Color: 2
+#  - Name: "kA = 8.37e-1"
+#    FilePath: "./data/Recombination_n1Sig/"
+#    SubDirectoryName: "cafmaker"
+#    Color: 4 
 
 #The next node defines the bins which would be used in some oscillation analysis. By defining the analysis bins, we can calculate the change in normalisation of each analysis bin for a variation of a parameter. This can then be used to calculate a covariance matrix to include bin-to-bin correlations.
 
@@ -80,6 +92,15 @@ Observables:
       - Variable: "kNuTrueCosZ"
         Label: "True Cosine Zenith"
         Binning: [-1.001,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.001]
+
+  - Name: "Reconstructed Energy"
+    Axes: 
+      - Variable: "kNuERec"
+        Label: "Reconstructed Energy"
+        Binning: [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 3.0, 4.0, 5.0, 10.0]
+      - Variable: "kNuETrue"
+        Label: "True Energy"
+        Binning: [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 3.0, 4.0, 5.0, 10.0]
 
   - Name: "Reco Cosine Zenith"
     Axes:

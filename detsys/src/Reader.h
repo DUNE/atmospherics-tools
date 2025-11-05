@@ -40,7 +40,7 @@ class Reader {
   void SetupTree();
   void SetupTreeHierarchical();
   void GetPOT();
-  void UpdateData();
+  void UpdateData(std::string fname);
   
  public:
   Reader(std::string fname, std::string subfolder = "");

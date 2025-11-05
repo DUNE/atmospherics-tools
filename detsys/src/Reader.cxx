@@ -146,6 +146,8 @@ const T Reader<T>::ReturnKinematicParameter(int Par) {
     return _data.cvn_nue;
   case kSelection:
     return _data.Selection;
+  case kNuETrue:
+    return _data.ev;
   case kNuERec:
     return _data.erec;
   case kAnalysisBin:
@@ -163,7 +165,7 @@ const T Reader<T>::GetEventWeight() {
 }
 
 template<typename T>
-void Reader<T>::UpdateData(){
+void Reader<T>::UpdateData(std::string fname){
   
   T ENu = _sr->mc.nu[0].E;
   T CosTh = _sr->mc.nu[0].momentum.y / sqrt(pow(_sr->mc.nu[0].momentum.x,2) + pow(_sr->mc.nu[0].momentum.y,2) + pow(_sr->mc.nu[0].momentum.z,2));
@@ -214,8 +216,14 @@ void Reader<T>::UpdateData(){
     _data.cvn_nue = _BAD_VALUE_;
     return;
   }
-  
-  _data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.numu;
+ 
+  if(fname == "./data/Deprecated/Nominal"){ 
+      _data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.numu;
+  }
+  else{
+      _data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.nc;
+  }
+
   _data.cvn_nue = _sr->common.ixn.pandora[0].nuhyp.cvn.nue;
 
   /*
