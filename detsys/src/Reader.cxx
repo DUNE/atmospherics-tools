@@ -165,7 +165,7 @@ const T Reader<T>::GetEventWeight() {
 }
 
 template<typename T>
-void Reader<T>::UpdateData(std::string fname){
+void Reader<T>::UpdateData(){
   
   T ENu = _sr->mc.nu[0].E;
   T CosTh = _sr->mc.nu[0].momentum.y / sqrt(pow(_sr->mc.nu[0].momentum.x,2) + pow(_sr->mc.nu[0].momentum.y,2) + pow(_sr->mc.nu[0].momentum.z,2));
@@ -217,7 +217,7 @@ void Reader<T>::UpdateData(std::string fname){
     return;
   }
  
-  if(fname == "./data/Deprecated/Nominal"){ 
+  if(_fname == "./data/Deprecated/Nominal"){ 
       _data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.numu;
   }
   else{
