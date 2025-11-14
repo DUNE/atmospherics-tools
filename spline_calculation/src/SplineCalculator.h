@@ -9,11 +9,10 @@
 #include <map>
 #include <memory>
 #include <variant>
+#include "MultiHistoNDAction.hxx"
 
 class SplineCalculator {
 public:
-    // Static method to enable multithreading - call this BEFORE creating any SplineCalculator
-    static void EnableMultiThreading();
     
     SplineCalculator(const std::string& fileName, const std::string& treeName);
 

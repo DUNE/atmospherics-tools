@@ -6,9 +6,6 @@
 #include <set>
 #include "TFile.h"
 
-void SplineCalculator::EnableMultiThreading() {
-    ROOT::EnableImplicitMT();
-}
 
 std::string SplineCalculator::getColumnType(const std::string& columnName) {
     // Use RDataFrame's GetColumnType method to detect actual type
