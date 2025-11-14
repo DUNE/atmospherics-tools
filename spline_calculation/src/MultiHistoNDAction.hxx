@@ -18,18 +18,11 @@
 
 class MultiHistoNDHelper : public ROOT::Detail::RDF::RActionImpl<MultiHistoNDHelper> {
 public:
-   // Recursive helper to fill the values array from a tuple
-   template <std::size_t I = 0, typename... Tp>
-   static typename std::enable_if<I == sizeof...(Tp), void>::type
-   fill_array_from_tuple(const std::tuple<Tp...>&, std::array<double, sizeof...(Tp)>&) {
-      // Base case: end of recursion
-   }
-
-   template <std::size_t I = 0, typename... Tp>
-   static typename std::enable_if<I < sizeof...(Tp), void>::type
-   fill_array_from_tuple(const std::tuple<Tp...>& t, std::array<double, sizeof...(Tp)>& arr) {
-      arr[I] = static_cast<double>(std::get<I>(t));
-      fill_array_from_tuple<I + 1, Tp...>(t, arr);
+   // C++17 fold expression to fill the array from a tuple
+   template <typename Tuple, std::size_t... Is>
+   static void fill_array_from_tuple_impl(const Tuple& t, std::array<double, sizeof...(Is)>& arr, std::index_sequence<Is...>) {
+      // Use a fold expression to unpack the tuple into the array
+      ((arr[Is] = static_cast<double>(std::get<Is>(t))), ...);
    }
 
    /// This type is a requirement for every helper.
@@ -61,24 +54,27 @@ public:
    /// This is a method executed at every entry
    template <typename WeightColumnType, typename... BinningColumnTypes>
    void Exec(unsigned int slot, const WeightColumnType& weights, BinningColumnTypes... binning_values)
-   {
-      // Deduce the dimensionality from the number of binning columns provided.
+   { // noexcept might be beneficial here if we are sure no exceptions are thrown
       constexpr size_t NDIM = sizeof...(BinningColumnTypes);
-
-      // Pack binning values into a tuple for easier handling
       auto binning_tuple = std::make_tuple(binning_values...);
+      std::array<double, NDIM> valuesArr;
+      fill_array_from_tuple_impl(binning_tuple, valuesArr, std::make_index_sequence<NDIM>{});
 
-      // Create and fill the array of doubles for THn_t::Fill
-      std::array<double, sizeof...(BinningColumnTypes)> valuesArr;
-      fill_array_from_tuple(binning_tuple, valuesArr);
-
-      // Ensure we don't try to fill more histograms than we have
-      const auto nHistos = fHistos[slot].size();
-      const auto nWeights = weights.size();
-
-      for (size_t i = 0; i < nHistos && i < nWeights; ++i) {
-         fHistos[slot][i]->Fill(valuesArr.data(), static_cast<double>(weights[i]));
+      const size_t nIterations = std::min(fHistos[slot].size(), static_cast<size_t>(weights.size()));
+      if (nIterations == 0) {
+         return;
       }
+
+      // Get the global bin index once for this event.
+      // This assumes all histograms for this slot have the same binning,
+      // and we are explicitly not calculating errors.
+      const Long64_t bin = fHistos[slot][0]->GetBin(valuesArr.data());
+
+      for (size_t i = 0; i < nIterations; ++i) {
+         const double weight = static_cast<double>(weights[i]);
+         fHistos[slot][i]->AddBinContent(bin, weight);
+      }
+      return;
    }
    /// This method is called at the end of the event loop. It is used to merge all the internal THnTs which
    /// were used in each of the data processing slots.
@@ -92,7 +88,7 @@ public:
       }
    }
  
-   std::string GetActionName(){
+   std::string GetActionName() const {
       return "MultiHistoNDHelper";
    }
 };
