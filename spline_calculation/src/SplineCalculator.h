@@ -11,6 +11,29 @@
 #include <variant>
 #include "MultiHistoNDAction.hxx"
 
+struct Systematic {
+    std::string name;
+    std::vector<double> paramNodes;
+    std::string vectorWeightBranch;
+    int nominalIndex;
+};
+
+/// Overload the << operator for std::ostream to allow easy printing of Systematic structs.
+inline std::ostream& operator<<(std::ostream& os, const Systematic& syst) {
+    os << "Systematic:\n"
+       << "  Name: " << syst.name << "\n"
+       << "  Vector Weight Branch: " << syst.vectorWeightBranch << "\n"
+       << "  Nominal Index: " << syst.nominalIndex << "\n"
+       << "  Parameter Nodes: [";
+    for (size_t i = 0; i < syst.paramNodes.size(); ++i) {
+        os << syst.paramNodes[i] << (i < syst.paramNodes.size() - 1 ? ", " : "");
+    }
+    os << "]";
+    return os;
+}
+
+
+
 class SplineCalculator {
 public:
     
@@ -22,6 +45,7 @@ public:
                        const std::vector<double>& systParamNodes,
                        const std::string& vectorWeightBranch,
                        int nominalIndex);
+    void addSystematic(const Systematic& syst);
 
     void run();
 
@@ -37,13 +61,6 @@ private:
     
     // Type detection helper
     std::string getColumnType(const std::string& columnName);
-    
-    struct Systematic {
-        std::string name;
-        std::vector<double> paramNodes;
-        std::string vectorWeightBranch;
-        int nominalIndex;
-    };
 
     struct BinningAxis {
         std::string variable;

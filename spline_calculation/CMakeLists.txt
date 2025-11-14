@@ -1,15 +1,79 @@
 cmake_minimum_required(VERSION 3.16)
 project(SplineCalculation)
 
+# Set a default build type if none is specified.
+# Common options: Debug, Release, RelWithDebInfo, MinSizeRel
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the build type" FORCE)
+  message(STATUS "No build type specified, defaulting to ${CMAKE_BUILD_TYPE}")
+endif()
+
 # Set a standard C++ version
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(DUNE_ANAOBJ_BRANCH v03_11_00)
 
 # Find the ROOT package, which is a core dependency for the library.
 find_package(ROOT REQUIRED COMPONENTS Core Hist Tree RooFit RooFitCore MathCore RIO Net) # Include necessary components
 
 # Include ROOT's use file to set up proper compilation flags and include directories
 include(${ROOT_USE_FILE})
+
+
+#=================== CPM    
+
+# download CPM.cmakes
+file(
+  DOWNLOAD
+  https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.40.2/CPM.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake
+)
+include(${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake)
+
+find_package(ROOT REQUIRED
+  COMPONENTS Geom Physics Matrix MathCore Tree RIO EG)
+if(ROOT_FOUND)
+  include(${ROOT_USE_FILE})
+else()
+  message(FATAL_ERROR "ROOT not found!")
+endif(ROOT_FOUND)
+
+CPMAddPackage(
+ 	  NAME duneanaobj
+	  GIT_TAG ${DUNE_ANAOBJ_BRANCH}
+	  GITHUB_REPOSITORY DUNE/duneanaobj 
+	  DOWNLOAD_ONLY YES
+  )
+	include_directories(${duneanaobj_SOURCE_DIR})
+
+  ROOT_GENERATE_DICTIONARY(StandardRecordDict ${duneanaobj_SOURCE_DIR}/duneanaobj/StandardRecord/StandardRecord.h ${duneanaobj_SOURCE_DIR}/duneanaobj/StandardRecord/SRGlobal.h
+  LINKDEF ${duneanaobj_SOURCE_DIR}/duneanaobj/StandardRecord/classes_def.xml)
+
+  file(GLOB SR_IMPL_FILES "${duneanaobj_SOURCE_DIR}/duneanaobj/StandardRecord/*.cxx")
+  LIST(APPEND SR_IMPL_FILES ${CMAKE_CURRENT_BINARY_DIR}/StandardRecordDict.cxx)
+
+  add_library(duneanaobj_StandardRecord SHARED ${SR_IMPL_FILES})
+  target_link_libraries(duneanaobj_StandardRecord PUBLIC ${ROOT_LIBRARIES})
+
+  target_include_directories(duneanaobj_StandardRecord PUBLIC 
+    $<BUILD_INTERFACE:${duneanaobj_SOURCE_DIR}> 
+    $<INSTALL_INTERFACE:include>)
+  target_include_directories(duneanaobj_StandardRecord PRIVATE 
+    $<BUILD_INTERFACE:${duneanaobj_SOURCE_DIR}/duneanaobj/StandardRecord> #root puts this in the dictionary
+    )
+  
+  set_target_properties(duneanaobj_StandardRecord PROPERTIES EXPORT_NAME all)
+  install(TARGETS duneanaobj_StandardRecord EXPORT mach3dune-targets DESTINATION lib)
+  
+  file(GLOB SR_HEADER_FILES "${duneanaobj_SOURCE_DIR}/duneanaobj/StandardRecord/*.h")
+
+  install(FILES ${SR_HEADER_FILES} DESTINATION include/duneanaobj/StandardRecord)
+  install(FILES 
+    ${CMAKE_CURRENT_BINARY_DIR}/libStandardRecordDict_rdict.pcm 
+    ${CMAKE_CURRENT_BINARY_DIR}/libStandardRecordDict.rootmap 
+    DESTINATION lib)
+
+  add_library(duneanaobj::all ALIAS duneanaobj_StandardRecord)
 
 # Add the subdirectory that builds our library
 add_subdirectory(src)

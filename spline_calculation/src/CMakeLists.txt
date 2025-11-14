@@ -6,7 +6,7 @@ add_library(SplineCalculator SHARED
 
 # Link the library against the required ROOT libraries.
 # ROOT::DataFrame will pull in all necessary dependencies.
-target_link_libraries(SplineCalculator PUBLIC ${ROOT_LIBRARIES})
+target_link_libraries(SplineCalculator PUBLIC duneanaobj::all ${ROOT_LIBRARIES})
 
 # Include ROOT headers
 target_include_directories(SplineCalculator PUBLIC 

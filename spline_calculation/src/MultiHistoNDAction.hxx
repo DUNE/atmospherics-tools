@@ -15,8 +15,8 @@
 #include <stdexcept>
 #include <iostream>
 
-template <typename T, unsigned int NDIM>
-class MultiHistoNDHelper : public ROOT::Detail::RDF::RActionImpl<MultiHistoNDHelper<T, NDIM>> {
+
+class MultiHistoNDHelper : public ROOT::Detail::RDF::RActionImpl<MultiHistoNDHelper> {
 public:
    // Recursive helper to fill the values array from a tuple
    template <std::size_t I = 0, typename... Tp>
@@ -32,29 +32,26 @@ public:
       fill_array_from_tuple<I + 1, Tp...>(t, arr);
    }
 
-   /// This is a handy, expressive shortcut.
-   using THn_t = THnT<T>;
    /// This type is a requirement for every helper.
-   using Result_t = std::vector<std::shared_ptr<THn_t>>;
+   using Result_t = std::vector<std::shared_ptr<THnT<double>>>;
  
 private:
-   std::vector<std::vector<std::shared_ptr<THn_t>>> fHistos; // one per data processing slot
+   std::vector<std::vector<std::shared_ptr<THnT<double>>>> fHistos; // one per data processing slot
+   ROOT::RDF::ColumnNames_t fcolumnList;
  
 public:
    /// This constructor takes all the parameters necessary to build the THnTs. In addition, it requires the names of
    /// the columns which will be used.
-   MultiHistoNDHelper(std::string_view name, std::string_view title, uint nvar, std::array<int, NDIM> nbins, std::array<double, NDIM> xmins,
-             std::array<double, NDIM> xmax)
+   MultiHistoNDHelper(const ROOT::RDF::THnDModel &model, unsigned int nHistos, const ROOT::RDF::ColumnNames_t &columnList)
    {
       const auto nSlots = ROOT::IsImplicitMTEnabled() ? ROOT::GetThreadPoolSize() : 1;
+      fHistos.resize(nSlots);
       for (auto i : ROOT::TSeqU(nSlots)) {
-            fHistos.emplace_back();
-        for (uint j = 0; j < nvar; ++j) {
-            fHistos[i].emplace_back(std::make_shared<THn_t>(std::string(name).c_str(), std::string(title).c_str(),
-                                                      NDIM, nbins.data(), xmins.data(), xmax.data()));
-         
+        for (unsigned int j = 0; j < nHistos; ++j) {
+            fHistos[i].emplace_back(model.GetHistogram());
         }
       }
+      fcolumnList = columnList;
    }
    MultiHistoNDHelper(MultiHistoNDHelper &&) = default;
    MultiHistoNDHelper(const MultiHistoNDHelper &) = delete;
@@ -65,14 +62,14 @@ public:
    template <typename WeightColumnType, typename... BinningColumnTypes>
    void Exec(unsigned int slot, const WeightColumnType& weights, BinningColumnTypes... binning_values)
    {
-      // The number of binning variables must match the histogram dimensionality
-      static_assert(sizeof...(BinningColumnTypes) == NDIM, "Number of binning columns must match histogram NDIM.");
+      // Deduce the dimensionality from the number of binning columns provided.
+      constexpr size_t NDIM = sizeof...(BinningColumnTypes);
 
       // Pack binning values into a tuple for easier handling
       auto binning_tuple = std::make_tuple(binning_values...);
 
-      // Create and fill the array of doubles for THnT::Fill
-      std::array<double, NDIM> valuesArr;
+      // Create and fill the array of doubles for THn_t::Fill
+      std::array<double, sizeof...(BinningColumnTypes)> valuesArr;
       fill_array_from_tuple(binning_tuple, valuesArr);
 
       // Ensure we don't try to fill more histograms than we have
