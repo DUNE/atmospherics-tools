@@ -30,12 +30,11 @@ public:
  
 private:
    std::vector<std::vector<std::shared_ptr<THnT<double>>>> fHistos; // one per data processing slot
-   ROOT::RDF::ColumnNames_t fcolumnList;
  
 public:
    /// This constructor takes all the parameters necessary to build the THnTs. In addition, it requires the names of
    /// the columns which will be used.
-   MultiHistoNDHelper(const ROOT::RDF::THnDModel &model, unsigned int nHistos, const ROOT::RDF::ColumnNames_t &columnList)
+   MultiHistoNDHelper(const ROOT::RDF::THnDModel &model, unsigned int nHistos)
    {
       const auto nSlots = ROOT::IsImplicitMTEnabled() ? ROOT::GetThreadPoolSize() : 1;
       fHistos.resize(nSlots);
@@ -44,7 +43,6 @@ public:
             fHistos[i].emplace_back(model.GetHistogram());
         }
       }
-      fcolumnList = columnList;
    }
    MultiHistoNDHelper(MultiHistoNDHelper &&) = default;
    MultiHistoNDHelper(const MultiHistoNDHelper &) = delete;
@@ -52,14 +50,9 @@ public:
    void Initialize() {}
    void InitTask(TTreeReader *, unsigned int) {}
    /// This is a method executed at every entry
-   template <typename WeightColumnType, typename... BinningColumnTypes>
-   void Exec(unsigned int slot, const WeightColumnType& weights, BinningColumnTypes... binning_values)
-   { // noexcept might be beneficial here if we are sure no exceptions are thrown
-      constexpr size_t NDIM = sizeof...(BinningColumnTypes);
-      auto binning_tuple = std::make_tuple(binning_values...);
-      std::array<double, NDIM> valuesArr;
-      fill_array_from_tuple_impl(binning_tuple, valuesArr, std::make_index_sequence<NDIM>{});
-
+   template <typename WeightColumnType, typename BinningColumnType>
+   void Exec(unsigned int slot, const WeightColumnType& weights, BinningColumnType bin_id)
+   { 
       const size_t nIterations = std::min(fHistos[slot].size(), static_cast<size_t>(weights.size()));
       if (nIterations == 0) {
          return;
@@ -68,11 +61,11 @@ public:
       // Get the global bin index once for this event.
       // This assumes all histograms for this slot have the same binning,
       // and we are explicitly not calculating errors.
-      const Long64_t bin = fHistos[slot][0]->GetBin(valuesArr.data());
+      // const Long64_t bin = fHistos[slot][0]->GetBin(valuesArr.data());
 
       for (size_t i = 0; i < nIterations; ++i) {
          const double weight = static_cast<double>(weights[i]);
-         fHistos[slot][i]->AddBinContent(bin, weight);
+         fHistos[slot][i]->AddBinContent(bin_id, weight);
       }
       return;
    }

@@ -21,28 +21,6 @@ std::string SplineCalculator::getColumnType(const std::string& columnName) {
 using WeightVec_t = ROOT::RVec<double>;
 using ResultPtr_t = ROOT::RDF::RResultPtr<std::vector<std::shared_ptr<THnT<double>>>>;
 
-template<typename T>
-auto SplineCalculator::createTypedBinningLambda(const std::vector<long long>& strides, 
-                                               const std::vector<size_t>& axis_nbins) const {
-    return [axes = this->binningAxes, strides, axis_nbins](const ROOT::RVec<T>& vals) -> long long {
-        long long global_idx = 0;
-        
-        for (size_t i = 0; i < axes.size(); ++i) {
-            const auto& axis = axes[i];
-            const double val = static_cast<double>(vals[i]); // Only convert when needed for comparison
-
-            if (val < axis.edges.front() || val >= axis.edges.back()) {
-                return -1LL;
-            }
-
-            auto it = std::lower_bound(axis.edges.begin(), axis.edges.end(), val);
-            int local_idx = std::distance(axis.edges.begin(), it) - 1;
-            global_idx += local_idx * strides[i];
-        }
-        return global_idx;
-    };
-}
-
 SplineCalculator::SplineCalculator(const std::string& fileName, const std::string& treeName)
     : df(treeName, fileName) {
     auto colNames = df.GetColumnNames();
@@ -99,20 +77,49 @@ void SplineCalculator::run() {
         binning_nbins.push_back(axis.edges.size() - 1);
     }
 
+   
      ROOT::RDF::THnDModel model("", "", naxes, binning_nbins, binning_edges);
+     std::shared_ptr<THnT<double>> hist = model.GetHistogram();
+
+    // --- Pre-calculate strides for efficient global bin index calculation ---
+    // The stride for an axis is the product of the number of bins of all preceding axes.
+    std::vector<long long> strides(naxes);
+    strides[0] = 1;
+    for (uint i = 1; i < naxes; ++i) {
+        strides[i] = strides[i - 1] * hist->GetAxis(i - 1)->GetNbins();
+    }
+
+
      std::vector<ResultPtr_t> all_hists;
 
-    for (const auto& syst : systematics) {
-        MultiHistoNDHelper helper(model, syst.paramNodes.size(), binning_vars);
-        std::vector<std::string> col_list = {syst.vectorWeightBranch};
-        col_list.insert(col_list.end(), binning_vars.begin(), binning_vars.end());
+    ROOT::RDF::RNode df_with_bins = df.Define("global_bin_id", []() { return 0LL; }, {});
 
-        ResultPtr_t hists = df.Book<WeightVec_t, float, float, float>(std::move(helper), col_list);
+    // --- Iteratively build the global bin index ---
+    for (uint i=0; i<naxes; ++i) {
+        const auto& axis = binningAxes[i];
+        // This lambda calculates the weighted contribution of a single axis to the global bin index.
+        auto get_1d_bin_contribution_lambda = [hist_axis = hist->GetAxis(i), stride = strides[i]](const float& value, const long long& prev_id) -> long long {
+            // return stride - 1;
+            // FindBin returns a 1-based index. We need a 0-based index for the global formula.
+            const int bin = hist_axis->FindBin(value);
+            // Handle underflow/overflow, which FindBin places in bins 0 and nbins+1.
+            return static_cast<long long>(bin) * stride + prev_id;
+        };
+
+        // For the first axis, create the "global_bin_id" column.
+        df_with_bins = df_with_bins.Redefine("global_bin_id", get_1d_bin_contribution_lambda, {axis.variable, "global_bin_id"});
+    }
+
+    // auto df_with_bins = df.Define("global_bin_id", binning_lambda, binning_vars);
+
+    for (const auto& syst : systematics) {
+        MultiHistoNDHelper helper(model, syst.paramNodes.size());
+        ResultPtr_t hists = df_with_bins.Book<WeightVec_t, long long>(std::move(helper), {syst.vectorWeightBranch, "global_bin_id"});
         all_hists.push_back(hists);
     }
 
     std::cout << "Booked all" << std::endl;
-    // ROOT::RDF::SaveGraph(df, "./mydot.dot");
+    ROOT::RDF::SaveGraph(df_with_bins, "./mydot.dot");
 
     for (auto mv_hists : all_hists) {
         for (const auto& hist : *mv_hists) {
@@ -121,6 +128,8 @@ void SplineCalculator::run() {
     }
     
 }
+
+///MAYBE CAN GO WITH SOME LOOP LOGIC TO ITERATIVELY BUILD THE COMPUTING GRAPH
 
 void SplineCalculator::writeSplines(const std::string& outputFileName) const {
     TFile outFile(outputFileName.c_str(), "RECREATE");
