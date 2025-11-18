@@ -1,6 +1,9 @@
 #include "SplineCalculator.h"
 #include <iostream>
 #include "duneanaobj/StandardRecord/SRGlobal.h"
+#include <ROOT/RLogger.hxx>
+ 
+
 
 std::vector<Systematic> getSystematicsFromRootFile(const std::string& fileName, const std::string& treeName) {
     std::vector<Systematic> systematics;
@@ -42,6 +45,9 @@ int main() {
         // SplineCalculator::EnableMultiThreading();
         ROOT::EnableImplicitMT();
 
+        // this increases RDF's verbosity level as long as the `verbosity` variable is in scope
+        auto verbosity = ROOT::RLogScopedVerbosity(ROOT::Detail::RDF::RDFLogChannel(), ROOT::ELogLevel::kInfo);
+
         std::vector<Systematic> systematics = getSystematicsFromRootFile("/Users/pgranger/test-ff/atmospherics-tools/spline_calculation/nusyst_new_sum.root", "SRGlobal");
         for (const auto& syst : systematics) {
             std::cout << syst << std::endl;
@@ -60,57 +66,30 @@ int main() {
         for (const auto& syst : systematics) {
             calculator.addSystematic(syst);
         }
-                     // The index of the nominal weight (0.0 sigma)
 
+        uint nentries = calculator.getNEntries();
+        std::cout << "Number of entries: " << nentries << std::endl;
 
-        // ROOT::RDataFrame df("SystWeights", "/Users/pgranger/test-ff/atmospherics-tools/spline_calculation/nusyst_new_sum.root");
-        
-        // // 1. Create and book histograms for the "MaCCRES" systematic
-        // MultiHistoNDHelper<double, 2> ma_helper{"ma_hists", // Name
-        //            "A THn with 2 dimensions",        // Title
-        //             7,                  // Number of histograms
-        //            {5, 5},                     // NBins
-        //            {0, 0},            // Axes min values
-        //            {10., 10.}};               // Axes max values
+        std::vector<bool> dummy_column(nentries, true);
+        for(uint i=0; i<nentries; ++i) {
+            dummy_column[i] = (i % 2 == 0); // Example condition: even indices
+        }
+        calculator.addColumnFromVector("dummy_selection", dummy_column);
 
-        // // By providing the column types as template arguments, we avoid the need for the JIT compiler
-        // // and gInterpreter. The compiler generates the action code at compile time.
-        // // NOTE: Replace these types with the actual types of your columns.
-        // using WeightVec_t = ROOT::RVec<double>;
-        // // The column order must match the Exec method: weights first, then binning variables.
-        // auto ma_hists = df.Book<WeightVec_t, float, float>(std::move(ma_helper), {"MaCCRES", "Ecalo", "Pmu_x"});
-
-        // // 2. Create and book histograms for the "MvCCRES" systematic
-        // MultiHistoNDHelper<double, 2> mv_helper{"mv_hists", // Name
-        //            "A THn with 2 dimensions for MvCCRES",        // Title
-        //             7,                  // Number of histograms
-        //            {5, 5},                     // NBins
-        //            {0, 0},            // Axes min values
-        //            {10., 10.}};               // Axes max values
-        // auto mv_hists = df.Book<WeightVec_t, float, float>(std::move(mv_helper), {"MvCCRES", "Ecalo", "Pmu_x"});
-
-        // // The event loop is triggered when you access the results.
-        // // Let's print the contents of the first histogram from each set.
-        // std::cout << "--- MaCCRES Histograms ---" << std::endl;
-        // for (const auto& hist : *ma_hists) {
-        //     hist->Print("all");
-        // }
-        
-        // std::cout << "\n--- MvCCRES Histograms ---" << std::endl;
-        // for (const auto& hist : *mv_hists) {
-        //     hist->Print("all");
-        // }
-
-        
-        // // calculator.addBinningAxis("reco_lepton_angle", {0.0, 0.5, 1.0, 2.5, 3.14});
+        // calculator.addSelection([](float Ecalo, float Pmu_x) {
+        //     return (Ecalo > 0.2) && (Pmu_x > 0.0);
+        // }, {"Ecalo", "Pmu_x"});
+        calculator.addSelection([](bool sel) {
+            return sel;
+        }, {"dummy_selection"});
 
         // // // 4. Run the calculation
         calculator.run();
 
         // // // 5. Write the results to a file
-        // // calculator.writeSplines("splines_vector_branch.root");
+        calculator.writeSplines("splines_vector_branch.root");
 
-        // // std::cout << "Successfully created splines in splines_vector_branch.root" << std::endl;
+        std::cout << "Successfully created splines in splines_vector_branch.root" << std::endl;
 
     return 0;
 }

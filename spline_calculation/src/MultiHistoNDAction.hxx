@@ -50,8 +50,8 @@ public:
    void Initialize() {}
    void InitTask(TTreeReader *, unsigned int) {}
    /// This is a method executed at every entry
-   template <typename WeightColumnType, typename BinningColumnType>
-   void Exec(unsigned int slot, const WeightColumnType& weights, BinningColumnType bin_id)
+   template <typename WeightColumnType, typename BinningColumnType, typename EventWeightColumnType>
+   void Exec(unsigned int slot, const WeightColumnType& weights, BinningColumnType bin_id, EventWeightColumnType event_weight)
    { 
       const size_t nIterations = std::min(fHistos[slot].size(), static_cast<size_t>(weights.size()));
       if (nIterations == 0) {
@@ -64,7 +64,7 @@ public:
       // const Long64_t bin = fHistos[slot][0]->GetBin(valuesArr.data());
 
       for (size_t i = 0; i < nIterations; ++i) {
-         const double weight = static_cast<double>(weights[i]);
+         const double weight = static_cast<double>(weights[i]*event_weight);
          fHistos[slot][i]->AddBinContent(bin_id, weight);
       }
       return;

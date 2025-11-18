@@ -1,11 +1,18 @@
 #include "SplineCalculator.h"
 #include <algorithm>
+#include <iostream>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <set>
 #include "TFile.h"
 #include "ROOT/RDFHelpers.hxx"
+#include "TAxis.h"
+
+//TODO: Nicely deal with category events -> implemented, to be checked
+//TODO: Allow for on the fly selection -> implemented, to be checked.
+//TODO: Allow for external selections (vectors) -> implemented, to be checked
+//TODO: Actually build the Splines -> implemented, to be checked
 
 
 std::string SplineCalculator::getColumnType(const std::string& columnName) {
@@ -22,7 +29,8 @@ using WeightVec_t = ROOT::RVec<double>;
 using ResultPtr_t = ROOT::RDF::RResultPtr<std::vector<std::shared_ptr<THnT<double>>>>;
 
 SplineCalculator::SplineCalculator(const std::string& fileName, const std::string& treeName)
-    : df(treeName, fileName) {
+    : df(ROOT::RDataFrame(treeName, fileName)) {
+    // df is now an RNode, initialized from an RDataFrame
     auto colNames = df.GetColumnNames();
 
     // 3. Loop over the list and print each name
@@ -30,12 +38,48 @@ SplineCalculator::SplineCalculator(const std::string& fileName, const std::strin
     for (const auto& name : colNames) {
         std::cout << "- " << name << std::endl;
     }
-    // Don't enable MT after RDataFrame construction - this causes threading issues
-    // ROOT::EnableImplicitMT();
+}
+
+ULong64_t SplineCalculator::getNEntries() {
+    return df.Count().GetValue();
+}
+
+void SplineCalculator::setInterpolationType(InterpolationType type) {
+    interpolationType = type;
 }
 
 void SplineCalculator::addBinningAxis(const std::string& variable, const std::vector<double>& edges) {
     binningAxes.push_back({variable, edges});
+}
+
+void SplineCalculator::addCategoricalBinningAxis(const std::string& variable, const std::vector<int>& categories) {
+    if (categories.empty()) {
+        throw std::runtime_error("Categorical axis must have at least one category.");
+    }
+
+    // Create a map from category value to a sequential bin index (0, 1, 2...)
+    std::map<int, int> category_map;
+    std::vector<double> edges;
+    for (size_t i = 0; i < categories.size(); ++i) {
+        category_map[categories[i]] = i;
+        edges.push_back(static_cast<double>(i) - 0.5);
+    }
+    edges.push_back(static_cast<double>(categories.size()) - 0.5);
+
+    std::string new_col_name = variable + "_categorical_index";
+    categorical_maps[new_col_name] = category_map;
+
+    // Define a new column that maps the original category value to the sequential index
+    auto mapping_lambda = [map = categorical_maps[new_col_name]](int val) {
+        return map.count(val) ? map.at(val) : -1; // Return -1 for values not in map (will go to underflow bin)
+    };
+    df = df.Define(new_col_name, mapping_lambda, {variable});
+
+    addBinningAxis(new_col_name, edges);
+}
+
+void SplineCalculator::setEventWeightColumn(const std::string& columnName) {
+    eventWeightColumn = columnName;
 }
 
 void SplineCalculator::addSystematic(const std::string& systName,
@@ -78,8 +122,8 @@ void SplineCalculator::run() {
     }
 
    
-     ROOT::RDF::THnDModel model("", "", naxes, binning_nbins, binning_edges);
-     std::shared_ptr<THnT<double>> hist = model.GetHistogram();
+    ROOT::RDF::THnDModel model("", "", naxes, binning_nbins, binning_edges);
+    std::shared_ptr<THnT<double>> hist = model.GetHistogram();
 
     // --- Pre-calculate strides for efficient global bin index calculation ---
     // The stride for an axis is the product of the number of bins of all preceding axes.
@@ -92,7 +136,13 @@ void SplineCalculator::run() {
 
      std::vector<ResultPtr_t> all_hists;
 
-    ROOT::RDF::RNode df_with_bins = df.Define("global_bin_id", []() { return 0LL; }, {});
+    // df is now the head of the graph, so we use it directly.
+    auto df_with_bins = df.Define("global_bin_id", []() { return 0LL; }, {});
+
+    if (eventWeightColumn.empty()) {
+        eventWeightColumn = "eventWeight"; // Default name
+        df_with_bins = df_with_bins.Define(eventWeightColumn, []() { return 1.0; });
+    }
 
     // --- Iteratively build the global bin index ---
     for (uint i=0; i<naxes; ++i) {
@@ -114,22 +164,73 @@ void SplineCalculator::run() {
 
     for (const auto& syst : systematics) {
         MultiHistoNDHelper helper(model, syst.paramNodes.size());
-        ResultPtr_t hists = df_with_bins.Book<WeightVec_t, long long>(std::move(helper), {syst.vectorWeightBranch, "global_bin_id"});
+        ResultPtr_t hists = df_with_bins.Book<WeightVec_t, long long, double>(std::move(helper), {syst.vectorWeightBranch, "global_bin_id", eventWeightColumn});
         all_hists.push_back(hists);
     }
 
-    std::cout << "Booked all" << std::endl;
-    ROOT::RDF::SaveGraph(df_with_bins, "./mydot.dot");
+    // --- Trigger the event loop and build splines ---
+    std::cout << "Starting event loop and spline construction..." << std::endl;
+    all_splines_map.clear();
 
-    for (auto mv_hists : all_hists) {
-        for (const auto& hist : *mv_hists) {
-            hist->Print("all");
+    for (size_t i = 0; i < systematics.size(); ++i) {
+        const auto& syst = systematics[i];
+        auto& syst_hists_ptr = all_hists[i];
+        // The dereference here triggers the RDataFrame event loop for this systematic
+        auto& syst_hists = *syst_hists_ptr;
+        if (syst_hists.empty()) continue;
+
+        // The histograms are 1D projections onto the global bin index.
+        // All histograms for a given systematic have the same binning.
+        long long n_global_bins = syst_hists[0]->GetNbins();
+
+        for (long long bin = 0; bin <= n_global_bins; ++bin) {
+            std::vector<double> x_nodes, y_values;
+            x_nodes.reserve(syst.paramNodes.size());
+            y_values.reserve(syst.paramNodes.size());
+
+            for (size_t j = 0; j < syst.paramNodes.size(); ++j) {
+                const double nominal_value = syst_hists[syst.nominalIndex]->GetBinContent(bin);
+                const double variation_value = syst_hists[j]->GetBinContent(bin);
+                double ratio = 1.0; // Default to 1.0 (no change)
+                if (nominal_value != 0) {
+                    ratio = variation_value / nominal_value;
+                }
+                x_nodes.push_back(syst.paramNodes[j]);
+                y_values.push_back(ratio);
+            }
+
+            // Check for "dummy" splines: not enough points or all y_values are 1.0
+            if (x_nodes.size() < 2) { // Need at least 2 points for any meaningful interpolation
+                continue;
+            }
+            bool all_ratios_one = true;
+            for (double y : y_values) {
+                if (y != 1.0) {
+                    all_ratios_one = false;
+                    break;
+                }
+            }
+            if (all_ratios_one) {
+                continue; // No systematic effect in this bin, don't store a spline
+            }
+
+            TString graph_name = TString::Format("%s_bin%lld", syst.name.c_str(), bin - 1);
+
+            // Create the appropriate graph or spline object
+            if (interpolationType == InterpolationType::Spline) {
+                auto spline = std::make_unique<TSpline3>(graph_name, x_nodes.data(), y_values.data(), x_nodes.size());
+                all_splines_map[syst.name][bin - 1] = std::move(spline);
+            } else { 
+                // Linear interpolation is a TGraph
+                auto graph = std::make_unique<TGraph>(x_nodes.size(), x_nodes.data(), y_values.data());
+                graph->SetName(graph_name);
+                graph->SetTitle(graph_name);
+                all_splines_map[syst.name][bin - 1] = std::move(graph);
+            }
         }
     }
-    
+    std::cout << "Spline construction complete." << std::endl;
 }
-
-///MAYBE CAN GO WITH SOME LOOP LOGIC TO ITERATIVELY BUILD THE COMPUTING GRAPH
 
 void SplineCalculator::writeSplines(const std::string& outputFileName) const {
     TFile outFile(outputFileName.c_str(), "RECREATE");
@@ -137,19 +238,76 @@ void SplineCalculator::writeSplines(const std::string& outputFileName) const {
         throw std::runtime_error("Could not open output file: " + outputFileName);
     }
 
+    long long total_possible_splines = 0;
+    if (!binningAxes.empty()) {
+        total_possible_splines = 1;
+        for (const auto& axis : binningAxes) {
+            total_possible_splines *= (axis.edges.size() - 1);
+        }
+    }
+    total_possible_splines *= systematics.size();
+
+    long long total_splines_created = 0;
+    long long written_splines = 0;
+
     for (const auto& [syst_name, splines_map] : all_splines_map) {
         if (!outFile.Get(syst_name.c_str())) {
             outFile.mkdir(syst_name.c_str());
         }
         outFile.cd(syst_name.c_str());
-        for (const auto& [bin_idx, spline] : splines_map) {
-            spline->Write();
+        total_splines_created += splines_map.size();
+        for (const auto& [bin_idx, spline_variant] : splines_map) {
+            // Only write TSpline3 objects, as requested
+            if (std::holds_alternative<std::unique_ptr<TSpline3>>(spline_variant)) {
+                auto& spline_ptr = std::get<std::unique_ptr<TSpline3>>(spline_variant);
+                if (spline_ptr) {
+                    spline_ptr->Write(spline_ptr->GetName());
+                    written_splines++;
+                }
+            }
         }
         outFile.cd("..");
     }
     outFile.Close();
+
+    double percentage = (total_possible_splines > 0) ? (100.0 * total_splines_created / total_possible_splines) : 0.0;
+    std::cout << "--- Spline Writing Summary ---" << std::endl;
+    std::cout << "Total possible splines (bins * systematics): " << total_possible_splines << std::endl;
+    std::cout << "Total non-dummy splines created: " << total_splines_created << " (" << std::fixed << std::setprecision(2) << percentage << "%)" << std::endl;
+    std::cout << "Total TSpline3 objects written to file: " << written_splines << std::endl;
+    std::cout << "------------------------------" << std::endl;
 }
 
-const std::map<std::string, std::map<int, std::unique_ptr<TSpline3>>>& SplineCalculator::getSplines() const {
+const std::map<std::string, std::map<int, SplineVariant>>& SplineCalculator::getSplines() const {
     return all_splines_map;
+}
+
+std::unique_ptr<SplineContainer> SplineCalculator::getSplineContainer(const std::string& systName) const {
+    if (all_splines_map.find(systName) == all_splines_map.end()) {
+        throw std::runtime_error("Systematic '" + systName + "' not found in SplineCalculator.");
+    }
+
+    // Create a THnDModel to pass to SplineContainer
+    std::vector<int> binning_nbins;
+    std::vector<std::vector<double>> binning_edges_vec;
+    for (const auto& axis : binningAxes) {
+        binning_nbins.push_back(axis.edges.size() - 1);
+        binning_edges_vec.push_back(axis.edges);
+    }
+    ROOT::RDF::THnDModel model("", "", binningAxes.size(), binning_nbins, binning_edges_vec);
+    auto spline_container = std::make_unique<SplineContainer>(model.GetHistogram().get());
+
+    // Populate the container by cloning the splines from all_splines_map
+    const auto& splines_map_for_syst = all_splines_map.at(systName);
+    for (const auto& pair : splines_map_for_syst) {
+        const auto& bin_idx = pair.first;
+        const auto& spline_variant = pair.second;
+        std::visit([&spline_container, &bin_idx](const auto& spline_ptr){
+            if(spline_ptr) {
+                spline_container->AddSpline(bin_idx, std::unique_ptr<TGraph>(static_cast<TGraph*>(spline_ptr->Clone())));
+            }
+        }, spline_variant);
+    }
+
+    return spline_container;
 }

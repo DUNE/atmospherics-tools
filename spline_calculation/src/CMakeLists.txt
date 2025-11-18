@@ -2,6 +2,7 @@
 add_library(SplineCalculator SHARED
     SplineCalculator.cxx
     SplineCalculator.h
+    SplineContainer.cxx
 )
 
 # Link the library against the required ROOT libraries.
