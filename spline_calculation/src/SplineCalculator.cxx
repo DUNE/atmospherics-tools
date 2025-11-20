@@ -13,6 +13,7 @@
 //TODO: Allow for on the fly selection -> implemented, to be checked.
 //TODO: Allow for external selections (vectors) -> implemented, to be checked
 //TODO: Actually build the Splines -> implemented, to be checked
+//TODO: The number of valid splines should be the same for all systematics -> BUG
 
 
 std::string SplineCalculator::getColumnType(const std::string& columnName) {
@@ -40,6 +41,42 @@ SplineCalculator::SplineCalculator(const std::string& fileName, const std::strin
     }
 }
 
+SplineCalculator::SplineCalculator(const std::string& fileName, const std::string& treeName, const std::vector<std::string>& friendFileNames, const std::vector<std::string>& friendTreeNames) 
+    : df(createDataFrameWithFriends(fileName, treeName, friendFileNames, friendTreeNames))
+{
+    // df is now an RNode, initialized from an RDataFrame
+    auto colNames = df.GetColumnNames();
+
+    // 3. Loop over the list and print each name
+    std::cout << "Column Names:" << std::endl;
+    for (const auto& name : colNames) {
+        std::cout << "- " << name << std::endl;
+    }
+}
+
+ROOT::RDataFrame SplineCalculator::createDataFrameWithFriends(const std::string& fileName, const std::string& treeName, const std::vector<std::string>& friendFileNames, const std::vector<std::string>& friendTreeNames) {
+    if (friendFileNames.size() != friendTreeNames.size()) {
+        throw std::runtime_error("Number of friend files and friend trees must be the same.");
+    }
+    // Using a unique_ptr for the TFile to ensure it's closed, although TFile's destructor handles this.
+    auto mainFile = new TFile(fileName.c_str(), "READ");
+    if (!mainFile || mainFile->IsZombie()) {
+        throw std::runtime_error("Could not open main file: " + fileName);
+    }
+    TTree *mainTree = nullptr;
+    mainFile->GetObject(treeName.c_str(), mainTree);
+    if (!mainTree) {
+        throw std::runtime_error("Could not find tree: " + treeName + " in file: " + fileName);
+    }
+    for (size_t i = 0; i < friendFileNames.size(); ++i) {
+        // The TTree::AddFriend documentation states that the friend TTree will be owned by the TChain/TTree.
+        // The TFile for the friend can be closed after adding.
+        mainTree->AddFriend(friendTreeNames[i].c_str(), friendFileNames[i].c_str());
+    }
+
+    return ROOT::RDataFrame(*mainTree);
+}
+
 ULong64_t SplineCalculator::getNEntries() {
     return df.Count().GetValue();
 }
@@ -58,7 +95,7 @@ void SplineCalculator::addCategoricalBinningAxis(const std::string& variable, co
     }
 
     // Create a map from category value to a sequential bin index (0, 1, 2...)
-    std::map<int, int> category_map;
+    std::map<int, float> category_map;
     std::vector<double> edges;
     for (size_t i = 0; i < categories.size(); ++i) {
         category_map[categories[i]] = i;
@@ -66,12 +103,15 @@ void SplineCalculator::addCategoricalBinningAxis(const std::string& variable, co
     }
     edges.push_back(static_cast<double>(categories.size()) - 0.5);
 
-    std::string new_col_name = variable + "_categorical_index";
+    //Need to replace the '.' in the variable name to avoid issues with RDataFrame
+    std::string new_col_name = variable;
+    std::replace(new_col_name.begin(), new_col_name.end(), '.', '_');
+    new_col_name += "_categorical_index";
     categorical_maps[new_col_name] = category_map;
 
     // Define a new column that maps the original category value to the sequential index
     auto mapping_lambda = [map = categorical_maps[new_col_name]](int val) {
-        return map.count(val) ? map.at(val) : -1; // Return -1 for values not in map (will go to underflow bin)
+        return map.count(val) ? map.at(val) : -1.0f; // Return -1 for values not in map (will go to underflow bin)
     };
     df = df.Define(new_col_name, mapping_lambda, {variable});
 

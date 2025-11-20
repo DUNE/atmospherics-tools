@@ -1,0 +1,46 @@
+# Configuration for SplineCalculator
+
+# General settings
+multithreading: true
+interpolation_type: "Spline" # "Spline" or "Linear"
+output_file: "splines_from_config.root"
+log_level: "Info" # "Debug", "Info", "Warning", "Error"
+
+# Input files and trees
+input_data:
+  main_file: "/Users/pgranger/test-ff/atmospherics-tools/spline_calculation/nusyst_new_sum.root"
+  main_tree: "SystWeights"
+  friend_files:
+    - "/Users/pgranger/test-ff/atmospherics-tools/spline_calculation/nusyst_genie_extracted.root"
+  friend_trees:
+    - "genie_dump"
+
+# Systematics definitions
+systematics:
+  file: "/Users/pgranger/test-ff/atmospherics-tools/spline_calculation/nusyst_new_sum.root"
+  tree: "SRGlobal"
+
+# Binning configuration
+binning_axes:
+  - type: "categorical"
+    variable: "genie_dump.isCC"
+    categories: [0, 1]
+  - type: "continuous"
+    variable: "Ecalo"
+    edges: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 2.0, 5.0, 10.0]
+  - type: "continuous"
+    variable: "genie_dump.nu_E"
+    edges: [0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+  - type: "categorical"
+    variable: "genie_dump.pdg"
+    categories: [-12, -14, -16, 12, 14, 16]
+
+# Event selection (applied in order)
+# The example of adding a column from a vector and filtering on it is a programmatic
+# operation. For configuration, a string-based filter is more common.
+# I've kept the programmatic dummy selection in the code as an example, but
+# you could extend the YAML to support simple string filters like this:
+# selections:
+#   - "Ecalo > 0.2 && Pmu_x > 0.0"
+#   - "genie_dump.isCC == 1"
+

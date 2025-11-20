@@ -43,6 +43,7 @@ class SplineCalculator {
 public:
     
     SplineCalculator(const std::string& fileName, const std::string& treeName);
+    SplineCalculator(const std::string& fileName, const std::string& treeName, const std::vector<std::string>& friendFileNames, const std::vector<std::string>& friendTreeNames);
 
     void setInterpolationType(InterpolationType type);
 
@@ -126,11 +127,14 @@ private:
     // Type detection helper
     std::string getColumnType(const std::string& columnName);
 
+    static ROOT::RDataFrame createDataFrameWithFriends(const std::string& fileName, const std::string& treeName,
+                                                       const std::vector<std::string>& friendFileNames, const std::vector<std::string>& friendTreeNames);
+
     struct BinningAxis {
         std::string variable;
         std::vector<double> edges;
     };
-    std::map<std::string, std::map<int, int>> categorical_maps;
+    std::map<std::string, std::map<int, float>> categorical_maps;
 
     InterpolationType interpolationType = InterpolationType::Spline;
     ROOT::RDF::RNode df;

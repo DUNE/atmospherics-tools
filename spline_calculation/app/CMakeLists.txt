@@ -6,4 +6,4 @@ add_executable(SplineCalcExample
 # Link the executable against our SplineCalculator library.
 # CMake will automatically handle finding the library, its headers,
 # and its dependencies (like ROOT).
-target_link_libraries(SplineCalcExample PRIVATE SplineCalculator)
+target_link_libraries(SplineCalcExample PRIVATE SplineCalculator yaml-cpp)

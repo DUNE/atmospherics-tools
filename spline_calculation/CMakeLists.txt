@@ -1,4 +1,9 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.14)
+
+# Set the policy version minimum to allow older dependencies (like yaml-cpp) to configure.
+# This is the equivalent of passing -DCMAKE_POLICY_VERSION_MINIMUM=3.5 on the command line.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+
 project(SplineCalculation)
 
 # Set a default build type if none is specified.
@@ -19,7 +24,6 @@ find_package(ROOT REQUIRED COMPONENTS Core Hist Tree RooFit RooFitCore MathCore 
 # Include ROOT's use file to set up proper compilation flags and include directories
 include(${ROOT_USE_FILE})
 
-
 #=================== CPM    
 
 # download CPM.cmakes
@@ -29,6 +33,23 @@ file(
   ${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake
 )
 include(${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake)
+
+# Add yaml-cpp using CPM. It will first try find_package, then download if not found.
+CPMAddPackage(
+  NAME yaml-cpp
+  VERSION 0.8.0
+  GIT_TAG 0.8.0
+  GITHUB_REPOSITORY jbeder/yaml-cpp
+  GIT_SHALLOW YES
+  OPTIONS
+    "YAML_CPP_INSTALL ON"
+    "YAML_CPP_BUILD_TESTS OFF"
+    "YAML_CPP_BUILD_CONTRIB OFF"
+    "YAML_BUILD_SHARED_LIBS ON"
+)
+if(NOT TARGET yaml-cpp::yaml-cpp)
+  cmessage(FATAL_ERROR "yaml-cpp package not found and could not be installed.")
+endif()
 
 find_package(ROOT REQUIRED
   COMPONENTS Geom Physics Matrix MathCore Tree RIO EG)
