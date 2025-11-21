@@ -23,6 +23,7 @@ enum KinematicParameters {
   kSelection,
   kNuERec,
   kNuETrue,
+  kNuERes,
   kAnalysisBin,
   nKinPars
 };
@@ -48,6 +49,9 @@ inline int Kinematic_StringToInt(std::string Str) {
   }
   if (Str== "kNuETrue") {
     return kNuETrue;
+  }
+  if (Str == "kNuERes") {
+    return kNuERes;
   }
   if (Str == "kAnalysisBin") {
     return kAnalysisBin;

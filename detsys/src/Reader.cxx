@@ -150,6 +150,8 @@ const T Reader<T>::ReturnKinematicParameter(int Par) {
     return _data.ev;
   case kNuERec:
     return _data.erec;
+  case kNuERes:
+    return (_data.erec - _data.ev) / _data.ev;
   case kAnalysisBin:
     return _data.AnalysisBinIndex;
   }
@@ -217,7 +219,7 @@ void Reader<T>::UpdateData(){
     return;
   }
  
-  if(_fname == "./data/Deprecated/Nominal"){ 
+  if(_fname == "./data/Deprecated/Recombination_n1Sig"){ 
       _data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.numu;
   }
   else{
