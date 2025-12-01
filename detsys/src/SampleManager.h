@@ -65,6 +65,7 @@ class SampleManager {
 
   std::string OutputFileName_1D;
   std::string OutputFileName_2D;
+  std::string OutputRootName;
   std::string DrawOptions_1D;
   std::string DrawOptions_2D;
   std::string SampleNameToRatioTo;

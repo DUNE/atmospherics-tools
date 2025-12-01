@@ -319,6 +319,7 @@ T SampleManager<T>::CalculateCovariance(T XNominalBinContent, std::vector<T> XVa
 template<typename T>
 void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   OutputFileName_1D = Config["OutputName"].as<std::string>();
+  OutputRootName = Config["OutputRootName"].as<std::string>();
   DrawOptions_1D = Config["DrawOpts"].as<std::string>();
   std::string NominalSample = Config["NominalSample"].as<std::string>();
   SampleNameToRatioTo = NominalSample;
@@ -408,6 +409,10 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   }
   CovarianceMatrix->SetStats(false);
   CovarianceMatrix->Draw("COLZ");
+
+  TFile *output_root_file = new TFile(OutputRootName.c_str(), "RECREATE");
+  CovarianceMatrix->Write("covariance");
+
   Canv->Print(OutputFileName_1D.c_str());
 
   CovarianceMatrixDiag->SetStats(false);
@@ -428,6 +433,9 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
     }
   }
   CorrelationMatrix->Draw("COLZ");
+  CorrelationMatrix->Write("correlation");
+  output_root_file->Close();
+
   Canv->Print(OutputFileName_1D.c_str());
 
   Canv->Print((OutputFileName_1D+"]").c_str());
