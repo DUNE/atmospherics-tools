@@ -36,11 +36,5 @@ binning_axes:
     categories: [-12, -14, -16, 12, 14, 16]
 
 # Event selection (applied in order)
-# The example of adding a column from a vector and filtering on it is a programmatic
-# operation. For configuration, a string-based filter is more common.
-# I've kept the programmatic dummy selection in the code as an example, but
-# you could extend the YAML to support simple string filters like this:
-# selections:
-#   - "Ecalo > 0.2 && Pmu_x > 0.0"
-#   - "genie_dump.isCC == 1"
-
+selections:
+  - "Ecalo > 0.2"

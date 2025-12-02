@@ -3,9 +3,41 @@
 #include <ROOT/RLogger.hxx>
 #include "yaml-cpp/yaml.h"
 #include <string>
+#include "SplineCalculator.h"
 
 
 std::vector<Systematic> getSystematicsFromRootFile(const std::string& fileName, const std::string& treeName) {
+    std::vector<Systematic> systematics;
+    TFile file(fileName.c_str(), "READ");
+    caf::SRGlobal* srGlobal = nullptr;
+    TTree* tree = nullptr;
+    file.GetObject(treeName.c_str(), tree);
+    if (!tree) {
+        throw std::runtime_error("Could not find tree: " + treeName);
+    }
+
+    tree->SetBranchAddress("SRGlobal", &srGlobal);
+    uint nread = tree->GetEntry(0); // Read the first entry to get SRGlobal
+
+    if (!srGlobal) {
+        throw std::runtime_error("SRGlobal branch is null.");
+    }
+
+    std::cout << "Found " << srGlobal->wgts.params.size() << " systematic parameters." << std::endl;
+    
+    for (const auto& param : srGlobal->wgts.params) {
+        Systematic syst;
+        syst.name = param.name;
+        syst.nominalIndex = (param.nshifts - 1) / 2; // Assuming nominal is in the middle
+        // For simplicity, we create dummy parameter nodes here
+        for (int i = 0; i < param.nshifts; ++i) {
+            syst.paramNodes.push_back(static_cast<double>(i - syst.nominalIndex));
+        }
+        syst.vectorWeightBranch = param.name; // Assuming branch name matches systematic name
+        systematics.emplace_back(std::move(syst));
+    }
+
+    file.Close();
     return systematics;
 }
 
@@ -83,24 +115,15 @@ int main(int argc, char* argv[]) {
     }
     std::cout << "Added " << systematics.size() << " systematics." << std::endl;
 
-    // --- Programmatic Selections (Example) ---
-    // This part remains programmatic as it involves generating data on the fly.
-    // For simple string-based selections, you could parse a "selections" list from YAML
-    // and use calculator.addSelection(string_filter, {});
-    uint nentries = calculator.getNEntries();
-    std::cout << "Number of entries before selection: " << nentries << std::endl;
-
-    std::vector<bool> dummy_column(nentries, true);
-    for(uint i=0; i<nentries; ++i) {
-        dummy_column[i] = (i % 2 == 0); // Example condition: even indices
+    // --- Selections from Config ---
+    if (config["selections"]) {
+        std::cout << "Applying selections from config..." << std::endl;
+        for (const auto& selection_node : config["selections"]) {
+            auto selection_string = selection_node.as<std::string>();
+            calculator.addSelection(selection_string);
+            std::cout << "  Applied selection: \"" << selection_string << "\"" << std::endl;
+        }
     }
-    calculator.addColumnFromVector("dummy_selection", dummy_column);
-    std::cout << "Added 'dummy_selection' column for filtering." << std::endl;
-
-    calculator.addSelection( {
-        return sel;
-    }, {"dummy_selection"});
-    std::cout << "Applied selection on 'dummy_selection'." << std::endl;
 
     // --- Run and Write Output ---
     std::cout << "Running calculation..." << std::endl;
@@ -114,4 +137,3 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
-

@@ -161,16 +161,21 @@ void SplineCalculator::run() {
         binning_nbins.push_back(axis.edges.size() - 1);
     }
 
+    //Keep the axes names to build the histogram name
+    std::string hist_name = "Template";
+    for (const auto& axis : binningAxes) {
+        hist_name += ";" + axis.variable;
+    }
    
-    ROOT::RDF::THnDModel model("", "", naxes, binning_nbins, binning_edges);
-    std::shared_ptr<THnT<double>> hist = model.GetHistogram();
+    ROOT::RDF::THnDModel model("", hist_name.data(), naxes, binning_nbins, binning_edges);
+    hist_template_ = model.GetHistogram();
 
     // --- Pre-calculate strides for efficient global bin index calculation ---
     // The stride for an axis is the product of the number of bins of all preceding axes.
     std::vector<long long> strides(naxes);
     strides[0] = 1;
     for (uint i = 1; i < naxes; ++i) {
-        strides[i] = strides[i - 1] * hist->GetAxis(i - 1)->GetNbins();
+        strides[i] = strides[i - 1] * hist_template_->GetAxis(i - 1)->GetNbins();
     }
 
 
@@ -188,7 +193,7 @@ void SplineCalculator::run() {
     for (uint i=0; i<naxes; ++i) {
         const auto& axis = binningAxes[i];
         // This lambda calculates the weighted contribution of a single axis to the global bin index.
-        auto get_1d_bin_contribution_lambda = [hist_axis = hist->GetAxis(i), stride = strides[i]](const float& value, const long long& prev_id) -> long long {
+        auto get_1d_bin_contribution_lambda = [hist_axis = hist_template_->GetAxis(i), stride = strides[i]](const float& value, const long long& prev_id) -> long long {
             // return stride - 1;
             // FindBin returns a 1-based index. We need a 0-based index for the global formula.
             const int bin = hist_axis->FindBin(value);
@@ -308,6 +313,14 @@ void SplineCalculator::writeSplines(const std::string& outputFileName) const {
         }
         outFile.cd("..");
     }
+
+    //Also write the histogram template for binning info
+    outFile.cd();
+    if (hist_template_) {
+        hist_template_->SetName("BinningTemplate");
+        hist_template_->Write("BinningTemplate");
+    }
+
     outFile.Close();
 
     double percentage = (total_possible_splines > 0) ? (100.0 * total_splines_created / total_possible_splines) : 0.0;
@@ -327,15 +340,10 @@ std::unique_ptr<SplineContainer> SplineCalculator::getSplineContainer(const std:
         throw std::runtime_error("Systematic '" + systName + "' not found in SplineCalculator.");
     }
 
-    // Create a THnDModel to pass to SplineContainer
-    std::vector<int> binning_nbins;
-    std::vector<std::vector<double>> binning_edges_vec;
-    for (const auto& axis : binningAxes) {
-        binning_nbins.push_back(axis.edges.size() - 1);
-        binning_edges_vec.push_back(axis.edges);
+    if (!hist_template_) {
+      throw std::runtime_error("Histogram template is not available. Have you called run()?");
     }
-    ROOT::RDF::THnDModel model("", "", binningAxes.size(), binning_nbins, binning_edges_vec);
-    auto spline_container = std::make_unique<SplineContainer>(model.GetHistogram().get());
+    auto spline_container = std::make_unique<SplineContainer>(hist_template_.get());
 
     // Populate the container by cloning the splines from all_splines_map
     const auto& splines_map_for_syst = all_splines_map.at(systName);

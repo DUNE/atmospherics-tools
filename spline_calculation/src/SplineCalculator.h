@@ -13,6 +13,8 @@
 #include "MultiHistoNDAction.hxx"
 #include "SplineContainer.h"
 
+template <class T> class THnT;
+
 struct Systematic {
     std::string name;
     std::vector<double> paramNodes;
@@ -59,6 +61,15 @@ public:
     template<typename F>
     void addSelection(F&& f, const std::vector<std::string>& columns) {
         df = df.Filter(std::forward<F>(f), columns, "User-defined functor/lambda selection");
+    }
+
+    /**
+     * @brief Adds a selection filter using a string expression.
+     * 
+     * @param selectionString A string containing the selection expression (e.g., "E > 0.5 && isCC == 1").
+     */
+    void addSelection(const std::string& selectionString) {
+        df = df.Filter(selectionString, "User-defined string selection");
     }
 
     /**
@@ -142,6 +153,7 @@ private:
     std::string eventWeightColumn;
     std::vector<Systematic> systematics;
     std::map<std::string, std::map<int, SplineVariant>> all_splines_map;
+    std::shared_ptr<THnT<double>> hist_template_;
 };
 
 #endif // SPLINECALCULATOR_H
