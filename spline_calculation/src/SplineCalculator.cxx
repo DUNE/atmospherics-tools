@@ -161,21 +161,21 @@ void SplineCalculator::run() {
         binning_nbins.push_back(axis.edges.size() - 1);
     }
 
-    //Keep the axes names to build the histogram name
-    std::string hist_name = "Template";
-    for (const auto& axis : binningAxes) {
-        hist_name += ";" + axis.variable;
-    }
    
-    ROOT::RDF::THnDModel model("", hist_name.data(), naxes, binning_nbins, binning_edges);
+    ROOT::RDF::THnDModel model("", "Template", naxes, binning_nbins, binning_edges);
     hist_template_ = model.GetHistogram();
+
+    //Set manually the titles of the axes
+    for(uint i = 0; i < binningAxes.size(); ++i){
+        hist_template_->GetAxis(i)->SetTitle(binningAxes[i].variable.c_str());
+    }
 
     // --- Pre-calculate strides for efficient global bin index calculation ---
     // The stride for an axis is the product of the number of bins of all preceding axes.
     std::vector<long long> strides(naxes);
     strides[0] = 1;
     for (uint i = 1; i < naxes; ++i) {
-        strides[i] = strides[i - 1] * hist_template_->GetAxis(i - 1)->GetNbins();
+        strides[i] = hist_template_->GetAxis(i - 1)->GetNbins() + 2; // +2 for underflow and overflow
     }
 
 
@@ -212,7 +212,7 @@ void SplineCalculator::run() {
         ResultPtr_t hists = df_with_bins.Book<WeightVec_t, long long, double>(std::move(helper), {syst.vectorWeightBranch, "global_bin_id", eventWeightColumn});
         all_hists.push_back(hists);
     }
-
+    
     // --- Trigger the event loop and build splines ---
     std::cout << "Starting event loop and spline construction..." << std::endl;
     all_splines_map.clear();
@@ -227,6 +227,19 @@ void SplineCalculator::run() {
         // The histograms are 1D projections onto the global bin index.
         // All histograms for a given systematic have the same binning.
         long long n_global_bins = syst_hists[0]->GetNbins();
+
+        //Printing the aggregated counts of each global_bin_id for debugging
+        if (i == 0) { // Only print for the first systematic to avoid spam
+            std::cout << "--- Debug: Aggregated counts for nominal case for systematic " << syst.name << " ---" << std::endl;
+            auto nominal_hist = syst_hists[syst.nominalIndex];
+            for (int bin = 0; bin <= n_global_bins; ++bin) {
+                double content = nominal_hist->GetBinContent(bin);
+                if (content > 0) {
+                    std::cout << "  global_bin_id " << (bin) << ": " << content << " entries" << std::endl;
+                }
+            }
+            std::cout << "-------------------------------------------------" << std::endl;
+        }
 
         for (long long bin = 0; bin <= n_global_bins; ++bin) {
             std::vector<double> x_nodes, y_values;
@@ -259,7 +272,7 @@ void SplineCalculator::run() {
                 continue; // No systematic effect in this bin, don't store a spline
             }
 
-            TString graph_name = TString::Format("%s_bin%lld", syst.name.c_str(), bin - 1);
+            TString graph_name = TString::Format("%s_bin%lld", syst.name.c_str(), bin);
 
             // Create the appropriate graph or spline object
             if (interpolationType == InterpolationType::Spline) {
