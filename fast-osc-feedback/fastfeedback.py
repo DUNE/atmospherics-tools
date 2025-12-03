@@ -130,7 +130,7 @@ class DataManager:
     """
 
     def default_data_selection(self):
-        return (pl.col('cvn_numu') > 0) & (pl.col('cvn_numu') > 0) & (pl.col('recoE_numu') > 0) & (pl.col('recoE_nue') > 0) & (pl.col('direc_numu').abs() <= 1) & (pl.col('direc_nue').abs() <= 1)
+        return (pl.col('cvn_nue') > 0) & (pl.col('cvn_numu') > 0) & (pl.col('recoE_numu') > 0) & (pl.col('recoE_nue') > 0) & (pl.col('direc_numu').abs() <= 1) & (pl.col('direc_nue').abs() <= 1) & (pl.col('npfps') >= 1)
     
     def default_direc_reco(self):
         return pl.when(
