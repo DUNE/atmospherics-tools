@@ -299,7 +299,7 @@ class DataManager:
         elif method == Method.Efficiency:
             if not isinstance(arg, FakeResolution):
                 raise ValueError("A FakeResolution object is expected when using the Method.Efficiency method")
-            self.energy_reco = lambda: pl.lit(arg.generate(self.data.select(arg.bin_var).to_series(), self.data['Ev']))
+            self.energy_reco = lambda: pl.lit(arg.generate(self.data.filter(self.data_selection).select(arg.bin_var).to_series(), self.data.filter(self.data_selection)['Ev']))
         else:
             raise ValueError()
         
