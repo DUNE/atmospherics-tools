@@ -24,6 +24,13 @@ enum KinematicParameters {
   kNuERec,
   kNuETrue,
   kNuERes,
+  kNuCosZRes,
+  kNuVertX,
+  kNuVertY,
+  kNuVertZ,
+  kNuMomX,
+  kNuMomY,
+  kNuMomZ,
   kAnalysisBin,
   nKinPars
 };
@@ -52,6 +59,27 @@ inline int Kinematic_StringToInt(std::string Str) {
   }
   if (Str == "kNuERes") {
     return kNuERes;
+  }
+  if (Str == "kNuCosZRes") {
+    return kNuCosZRes;
+  }
+  if (Str == "kNuVertX") {
+    return kNuVertX;
+  }
+  if (Str == "kNuVertY") {
+    return kNuVertY;
+  }
+  if (Str == "kNuVertZ") {
+    return kNuVertZ;
+  }
+  if (Str == "kNuMomX") {
+    return kNuMomX;
+  }
+  if (Str == "kNuMomY") {
+    return kNuMomY;
+  }
+  if (Str == "kNuMomZ") {
+    return kNuMomZ;
   }
   if (Str == "kAnalysisBin") {
     return kAnalysisBin;

@@ -151,7 +151,21 @@ const T Reader<T>::ReturnKinematicParameter(int Par) {
   case kNuERec:
     return _data.erec;
   case kNuERes:
-    return (_data.erec - _data.ev) / _data.ev;
+    return (_data.erec - _data.ev)/_data.ev;
+  case kNuCosZRes:
+    return (_data.RecoCZ - _data.TrueCZ)/_data.TrueCZ;
+  case kNuVertX:
+    return _data.vtx_x;
+  case kNuVertY:
+    return _data.vtx_y;
+  case kNuVertZ:
+    return _data.vtx_z;
+  case kNuMomX:
+    return _data.NuMomX;
+  case kNuMomY:
+    return _data.NuMomY;
+  case kNuMomZ:
+    return _data.NuMomZ;
   case kAnalysisBin:
     return _data.AnalysisBinIndex;
   }
