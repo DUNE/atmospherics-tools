@@ -16,9 +16,20 @@ Sample<T>::Sample(YAML::Node SampleConfig) {
 }
 
 template<typename T>
+float Sample<T>::GetIntegral() {
+  float sum_weights=0;
+  for (int i=0;i<SampleReader->GetNentries();i++) {
+    SampleReader->GetEntry(i);
+
+    T EventWeight = SampleReader->GetEventWeight();
+    sum_weights=sum_weights+EventWeight;
+  }
+  return sum_weights;
+}
+
+template<typename T>
 void Sample<T>::ReadData() {
   std::cout << "Reading data from Sample:" << Name << std::endl;
-
   for (int i=0;i<SampleReader->GetNentries();i++) {
     SampleReader->GetEntry(i);
     
@@ -62,7 +73,6 @@ void Sample<T>::ReadData() {
 
     }
   }
-
   for (size_t iMeas=0;iMeas<Measurements.size();iMeas++) {
     int nAxes =  Measurements[iMeas].nDimensions;
     if (nAxes == 0) {
@@ -200,7 +210,9 @@ void SampleManager<T>::ScaleToNormalisation(std::string SampleNameToNormTo) {
   }
   
   for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
-    T Factor = static_cast<T>(Samples[IndexToNormTo]->GetNEvents())/static_cast<T>(Samples[iSamp]->GetNEvents());
+    T Factor = static_cast<T>(Samples[IndexToNormTo]->GetIntegral())/static_cast<T>(Samples[iSamp]->GetIntegral());
+    //T Factor = static_cast<T>(Samples[IndexToNormTo]->GetNEvents())/static_cast<T>(Samples[iSamp]->GetNEvents());
+    std::cout<<"scaling factor: "<<Factor<<std::endl;
     Samples[iSamp]->Scale(Factor);
   }
 }

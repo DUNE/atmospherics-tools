@@ -41,6 +41,7 @@ class Sample {
   void SetAnalysisBinning(AnalysisBinningManager<T>* AnalysisBinning_);
   void ReadData();
   int GetNEvents() {return SampleReader->GetNentries();}
+  float GetIntegral();
   std::string GetName() {return Name;}
   TH1* GetMeasurement(int iMeas);
   TH1* GetAnalysisBinningHistogram() {return AnalysisBinningHistogram;}
