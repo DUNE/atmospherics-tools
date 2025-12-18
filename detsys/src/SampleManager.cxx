@@ -329,6 +329,25 @@ T SampleManager<T>::CalculateCovariance(T XNominalBinContent, std::vector<T> XVa
 }
 
 template<typename T>
+T SampleManager<T>::CalculateCovarianceErr(T XNominalBinContent, T XNominalBinError, std::vector<T> XVariedBinContents, std::vector<T> XVariedBinErrors, T YNominalBinContent, T YNominalBinError, std::vector<T> YVariedBinContents, std::vector<T> YVariedBinErrors) {
+  T CovarianceErr2 = 0.;
+
+  size_t nVariedSamples = XVariedBinContents.size();
+  if (nVariedSamples != YVariedBinContents.size()) {
+    std::cerr << "Invalid shape of XVariedBinContents and YVariedBinContents" << std::endl;
+    throw;
+  }
+
+  for (size_t iMeas=0;iMeas<nVariedSamples;iMeas++) {
+    CovarianceErr2 += TMath::Power((YVariedBinContents[iMeas]-YNominalBinContent),2)*(TMath::Power(XVariedBinErrors[iMeas],2)+TMath::Power(XNominalBinError,2))+TMath::Power((XVariedBinContents[iMeas]-XNominalBinContent),2)*(TMath::Power(YVariedBinErrors[iMeas],2)+TMath::Power(YNominalBinError,2));
+  }
+  CovarianceErr2 /= nVariedSamples;
+
+  CovarianceErr2=TMath::Sqrt(CovarianceErr2);
+  return CovarianceErr2;
+}
+
+template<typename T>
 void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   OutputFileName_1D = Config["OutputName"].as<std::string>();
   OutputRootName = Config["OutputRootName"].as<std::string>();
@@ -399,24 +418,30 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
 
   for (int xBin=0;xBin<nBins;xBin++) {
     T XNominalBinContent = Samples[NominalIndex]->GetAnalysisBinningHistogram()->GetBinContent(xBin+1);
-
+    T XNominalBinError = Samples[NominalIndex]->GetAnalysisBinningHistogram()->GetBinError(xBin+1);
     std::vector<T> XVariedBinContents;
+    std::vector<T> XVariedBinErrors;
     for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
       if (static_cast<int>(iSamp) == NominalIndex) continue;
       XVariedBinContents.push_back(Samples[iSamp]->GetAnalysisBinningHistogram()->GetBinContent(xBin+1));
+      XVariedBinErrors.push_back(Samples[iSamp]->GetAnalysisBinningHistogram()->GetBinError(xBin+1));
     }
     
     for (int yBin=0;yBin<nBins;yBin++) {
       T YNominalBinContent = Samples[NominalIndex]->GetAnalysisBinningHistogram()->GetBinContent(yBin+1);
-      
+      T YNominalBinError = Samples[NominalIndex]->GetAnalysisBinningHistogram()->GetBinError(yBin+1); 
       std::vector<T> YVariedBinContents;
+      std::vector<T> YVariedBinErrors;
       for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
 	if (static_cast<int>(iSamp) == NominalIndex) continue;
 	YVariedBinContents.push_back(Samples[iSamp]->GetAnalysisBinningHistogram()->GetBinContent(yBin+1));
+        YVariedBinErrors.push_back(Samples[iSamp]->GetAnalysisBinningHistogram()->GetBinError(yBin+1));
       }
       
       T Covariance = CalculateCovariance(XNominalBinContent,XVariedBinContents,YNominalBinContent,YVariedBinContents);
+      T CovarianceErr = CalculateCovarianceErr(XNominalBinContent,XNominalBinError,XVariedBinContents,XVariedBinErrors,YNominalBinContent,YNominalBinError,YVariedBinContents,YVariedBinErrors);
       CovarianceMatrix->SetBinContent(xBin+1,yBin+1,Covariance);
+      CovarianceMatrix->SetBinError(xBin+1,yBin+1,CovarianceErr);
     }
   }
   CovarianceMatrix->SetStats(false);
@@ -430,6 +455,7 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   CovarianceMatrixDiag->SetStats(false);
   for (int xBin=0;xBin<nBins;xBin++) {
     CovarianceMatrixDiag->SetBinContent(xBin+1,TMath::Sqrt(CovarianceMatrix->GetBinContent(xBin+1,xBin+1)));
+    CovarianceMatrixDiag->SetBinError(xBin+1,0.5/TMath::Sqrt(CovarianceMatrix->GetBinContent(xBin+1,xBin+1))*CovarianceMatrix->GetBinError(xBin+1,xBin+1));
   }
   CovarianceMatrixDiag->Draw();
   Canv->Print(OutputFileName_1D.c_str());

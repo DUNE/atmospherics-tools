@@ -79,6 +79,7 @@ class SampleManager {
   void Plot1DRatioHists(TCanvas* Canv, std::vector<TH1*> Hists);
   void Plot1DHists(TCanvas* Canv, std::vector<TH1*> Hists);
   T CalculateCovariance(T XNominalBinContent, std::vector<T> XVariedBinContents, T YNominalBinContent, std::vector<T> YVariedBinContents);
+  T CalculateCovarianceErr(T XNominalBinContent, T XNominalBinError, std::vector<T> XVariedBinContents, std::vector<T> XVariedBinErrors, T YNominalBinContent, T YNominalBinError, std::vector<T> YVariedBinContents, std::vector<T> YVariedBinErrors);
 
  public:
   SampleManager(YAML::Node Config);
