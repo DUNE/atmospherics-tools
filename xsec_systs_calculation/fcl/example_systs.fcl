@@ -871,6 +871,77 @@ generated_systematic_provider_configuration: {
       }
       tool_type: "GENIEReWeight"
    }
+
+    zexpansion_weighter_toolconfig: {
+        b1: {
+            isSplineable: true
+            paramVariations: [
+                -3,
+                -2,
+                -1,
+                0,
+                1,
+                2,
+                3
+            ]
+            prettyName: b1
+            systParamId: 84
+        }
+        b2: {
+            isSplineable: true
+            paramVariations: [
+                -3,
+                -2,
+                -1,
+                0,
+                1,
+                2,
+                3
+            ]
+            prettyName: b2
+            systParamId: 85
+        }
+        b3: {
+            isSplineable: true
+            paramVariations: [
+                -3,
+                -2,
+                -1,
+                0,
+                1,
+                2,
+                3
+            ]
+            prettyName: b3
+            systParamId: 86
+        }
+        b4: {
+            isSplineable: true
+            paramVariations: [
+                -3,
+                -2,
+                -1,
+                0,
+                1,
+                2,
+                3
+            ]
+            prettyName: b4
+            systParamId: 87
+        }
+        instance_name: zexpansion_weighter_toolconfig
+        parameter_headers: [
+            b1,
+            b2,
+            b3,
+            b4
+        ]
+        tool_options: {
+            verbosity_level: 0
+        }
+        tool_type: ZExpPCAWeighter
+    }
+
     MINERvAE2p2h_DUNE_TDR_FakeData: {
         E2p2h_A_nu: {
             centralParamValue: 0
@@ -1444,6 +1515,7 @@ generated_systematic_provider_configuration: {
         BeRPAWeight_DUNE_TDR_FakeData,
         EbLepMomShift_DUNE_TDR_FakeData,
         MiscInteractionSysts_DUNE_TDR_FakeData,
-        FSILikeEAvailSmearing_DUNE_TDR_FakeData
+        FSILikeEAvailSmearing_DUNE_TDR_FakeData,
+        zexpansion_weighter_toolconfig
     ]
 }

@@ -10,7 +10,7 @@ setup boost v1_80_0 -q e26:prof
 
 setup genie v3_04_00d -q e26:prof
 setup genie_xsec v3_04_00 -q AR2320i00000:e1000:k250
-export GENIE=/cvmfs/larsoft.opensciencegrid.org/products/genie/v3_04_00d/Linux64bit+3.10-2.17-e26-prof
+#export GENIE=/cvmfs/larsoft.opensciencegrid.org/products/genie/v3_04_00d/Linux64bit+3.10-2.17-e26-prof
 
 ## CAFs
 # setup duneanaobj v03_03_00 -q e26:prof
