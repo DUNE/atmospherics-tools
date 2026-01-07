@@ -116,7 +116,7 @@ int main(int argc, char const *argv[]) {
 
   // CAF tree
   TTree *t_input_caftree(nullptr);
-  f_input->GetObject("cafmaker/cafTree", t_input_caftree);
+  f_input->GetObject("cafTree", t_input_caftree);
 
   if(!t_input_caftree){
     std::cerr << "Could not find input tree cafTree" << std::endl;
@@ -125,12 +125,13 @@ int main(int argc, char const *argv[]) {
   size_t NEvs = t_input_caftree->GetEntries();
   size_t NToRead = std::min(NEvs, cliopts::NMax);
   printf("@@ Number of CAF events = %ld\n", NEvs);
+  printf("Going to read %ld events\n", NToRead);
   caf::StandardRecord* sr = nullptr; // we will update this and write it to the output
   t_input_caftree->SetBranchAddress("rec", &sr);
 
   // GENIE tree
   TTree *t_input_genie(nullptr);
-  f_input->GetObject("cafmaker/genieEvt", t_input_genie);
+  f_input->GetObject("genieEvt", t_input_genie);
 
   if(!t_input_genie){
     std::cerr << "Could not find input tree cafmaker/genieEvt" << std::endl;
@@ -210,12 +211,16 @@ int main(int argc, char const *argv[]) {
   srglobal_tree->Fill();
   srglobal_tree->Write("SRGlobal");
 
+  size_t Nmax = std::min(NToRead + cliopts::NSkip, NEvs);
+
+  printf("Reading events from entry %ld to %ld\n", cliopts::NSkip, Nmax);
+
   progressbar bar(NToRead);
   bar.set_todo_char(" ");
   bar.set_done_char("█");
 
   // Loop over CAFTree
-  for (size_t cafev_it = cliopts::NSkip; cafev_it < NToRead; ++cafev_it) {
+  for (size_t cafev_it = cliopts::NSkip; cafev_it < Nmax; ++cafev_it) {
 
     t_input_caftree->GetEntry(cafev_it);
     bar.update();
