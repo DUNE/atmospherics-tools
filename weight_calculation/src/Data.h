@@ -39,6 +39,10 @@ struct Data
     T osc_from_e_w = 0;
     T osc_from_mu_w = 0;
     T final_oscillated_w = 0;
+    T cvn_score_numu = 0;
+    T cvn_score_nue = 0;
+    T cvn_score_nc = 0;
+    unsigned int sample_id = 0;
     std::vector<std::vector<float>> *weightVec;
 };
 
@@ -75,6 +79,13 @@ static inline Data<double> float2double(const Data<float>& data){
     data_D.nue_w = data.nue_w;
     data_D.numu_w = data.numu_w;
     data_D.BeRPA_A_cvwgt = data.BeRPA_A_cvwgt;
+    data_D.osc_from_e_w = data.osc_from_e_w;
+    data_D.osc_from_mu_w = data.osc_from_mu_w;
+    data_D.final_oscillated_w = data.final_oscillated_w;
+    data_D.cvn_score_numu = data.cvn_score_numu;
+    data_D.cvn_score_nue = data.cvn_score_nue;
+    data_D.cvn_score_nc = data.cvn_score_nc;
+    data_D.sample_id = data.sample_id;
     data_D.weightVec = data.weightVec;
     data_D.genie_weight = data.genie_weight;
 

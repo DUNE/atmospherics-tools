@@ -68,6 +68,17 @@ void Calculator<T>::Process(){
         data.osc_from_mu_w = osc_from_mu_w;
         data.final_oscillated_w = final_oscillated_w;
 
+        //Reco fravour assignment based on cvn scores
+        if(data.cvn_score_numu > data.cvn_score_nue && data.cvn_score_numu > data.cvn_score_nc){
+            data.sample_id = 0; // numu sample
+        }
+        else if(data.cvn_score_nue > data.cvn_score_numu && data.cvn_score_nue > data.cvn_score_nc){
+            data.sample_id = 1; // nue sample
+        }
+        else{
+            data.sample_id = 2; // nc sample
+        }
+
         _wrt.Fill(data);
     }
 }

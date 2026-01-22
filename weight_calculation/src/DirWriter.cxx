@@ -43,4 +43,5 @@ void DirWriter::SetupTree(){
     _tree->Branch("osc_from_mu_w",&_data.osc_from_mu_w);
     _tree->Branch("final_oscillated_w",&_data.final_oscillated_w);
     _tree->Branch("genie_weight",&_data.genie_weight);
+    _tree->Branch("sample_id",&_data.sample_id);
 }

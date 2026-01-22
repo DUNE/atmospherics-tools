@@ -169,6 +169,18 @@ void Reader<T>::UpdateData(){
     _data.NuMomZ = _sr->mc.nu[0].momentum.z;
     _data.nuPDG = _sr->mc.nu[0].pdg;
     _data.weight = _sr->mc.nu[0].genweight;
+
+    if(_sr->common.ixn.pandora.size() != 1){
+        _data.cvn_score_numu = 0;
+        _data.cvn_score_nue = 0;
+        _data.cvn_score_nc = 1;
+    }
+    else{
+        _data.cvn_score_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.numu;
+        _data.cvn_score_nue = _sr->common.ixn.pandora[0].nuhyp.cvn.nue;
+        _data.cvn_score_nc = _sr->common.ixn.pandora[0].nuhyp.cvn.nc;
+    }
+    
 }
 
 template<typename T>
