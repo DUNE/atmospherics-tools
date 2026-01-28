@@ -12,6 +12,7 @@ ExternalProject_Add(OscProb
     GIT_REPOSITORY https://github.com/joaoabcoelho/OscProb
     SOURCE_DIR ${OSCPROB_SOURCE_DIR}
     BUILD_IN_SOURCE 1
+    GIT_TAG v2.2.0
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ${MAKE}
     INSTALL_COMMAND "${oscprob_lib_install_commands}"
