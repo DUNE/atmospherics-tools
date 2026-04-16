@@ -25,6 +25,7 @@ enum KinematicParameters {
   kNuETrue,
   kNuERes,
   kNuCosZRes,
+  kNuCosZResAbs,
   kNuVertX,
   kNuVertY,
   kNuVertZ,
@@ -61,6 +62,9 @@ inline int Kinematic_StringToInt(std::string Str) {
     return kNuERes;
   }
   if (Str == "kNuCosZRes") {
+    return kNuCosZRes;
+  }
+  if (Str == "kNuCosZResAbs") {
     return kNuCosZRes;
   }
   if (Str == "kNuVertX") {
