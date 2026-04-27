@@ -1,11 +1,12 @@
 #include "SampleManager.h"
-
+#include "TLatex.h"
 #include "TLegend.h"
 
 template<typename T>
 Sample<T>::Sample(YAML::Node SampleConfig) {
   Name = SampleConfig["Name"].as<std::string>();
   SampleColour = SampleConfig["Colour"].as<int>();
+  LineStyle = SampleConfig["LineStyle"].as<int>();
   FilePath = SampleConfig["FilePath"].as<std::string>();
   TupleName = SampleConfig["SubDirectoryName"].as<std::string>();
 
@@ -32,19 +33,15 @@ void Sample<T>::ReadData() {
   std::cout << "Reading data from Sample:" << Name << std::endl;
   for (int i=0;i<SampleReader->GetNentries();i++) {
     SampleReader->GetEntry(i);
-    
     T EventWeight = SampleReader->GetEventWeight();
     AnalysisBinningHistogram->Fill(SampleReader->ReturnKinematicParameter(kAnalysisBin),EventWeight);
-
     for (size_t iMeas=0;iMeas<Measurements.size();iMeas++) {
       bool PassesCut = true;
-
       for (size_t iCut=0;iCut<Measurements[iMeas].Cuts.size();iCut++) {
 	int Variable = Measurements[iMeas].Cuts[iCut].Variable_Int;
 	T LowerBound = Measurements[iMeas].Cuts[iCut].LowerBound;
 	T UpperBound = Measurements[iMeas].Cuts[iCut].UpperBound;
 	T VariableValue = SampleReader->ReturnKinematicParameter(Variable);
-
 	if (VariableValue < LowerBound) {
 	  PassesCut = false;
 	  break;
@@ -57,20 +54,18 @@ void Sample<T>::ReadData() {
       if (!PassesCut) {
 	continue;
       }
-
       if (Measurements[iMeas].nDimensions == 1) {
-	Measurements[iMeas].Histogram->Fill(SampleReader->ReturnKinematicParameter(Measurements[iMeas].AxisVariables[0]),EventWeight);
+        T XVar = SampleReader->ReturnKinematicParameter(Measurements[iMeas].AxisVariables[0]);
+        Measurements[iMeas].Histogram->Fill(XVar,EventWeight);
       } else if (Measurements[iMeas].nDimensions == 2) {
 	T XVar = SampleReader->ReturnKinematicParameter(Measurements[iMeas].AxisVariables[0]);
 	T YVar = SampleReader->ReturnKinematicParameter(Measurements[iMeas].AxisVariables[1]);
-
 	TH2* Hist2D = dynamic_cast<TH2*>(Measurements[iMeas].Histogram);
 	Hist2D->Fill(XVar,YVar,EventWeight);
       } else {
 	std::cerr << "Invalid number of axes! >2" << std::endl;
 	throw;
       }
-
     }
   }
   for (size_t iMeas=0;iMeas<Measurements.size();iMeas++) {
@@ -80,14 +75,16 @@ void Sample<T>::ReadData() {
       throw;
     } else if (nAxes == 1) {
       Measurements[iMeas].Histogram->GetYaxis()->SetTitle((std::string(Measurements[iMeas].Histogram->GetYaxis()->GetTitle())+"/Bin Width").c_str());
+      Measurements[iMeas].Histogram->GetYaxis()->CenterTitle();
+      Measurements[iMeas].Histogram->GetXaxis()->CenterTitle();
     } else if (nAxes == 2) {
       Measurements[iMeas].Histogram->GetZaxis()->SetTitle((std::string(Measurements[iMeas].Histogram->GetZaxis()->GetTitle())+"/Bin Width").c_str());
     } else {
       std::cerr << "Invalid number of axes! >2" << std::endl;
       throw;
     }
-
     Measurements[iMeas].Histogram->Scale(1.0,"width");
+   
   }
 }
 
@@ -98,6 +95,8 @@ void Sample<T>::SetAnalysisBinning(AnalysisBinningManager<T>* AnalysisBinning_) 
 
   AnalysisBinningHistogram = new TH1D((Name+"_AnalysisBinning").c_str(),"Analysis Binning;Bin Number;Events",AnalysisBinning->GetNBins(),0,AnalysisBinning->GetNBins());
   AnalysisBinningHistogram->SetLineColor(SampleColour);
+  AnalysisBinningHistogram->SetLineStyle(LineStyle);
+  AnalysisBinningHistogram->SetLineWidth(2);
 }
 
 template<typename T>
@@ -166,6 +165,8 @@ TH1* Sample<T>::GetMeasurement(int iMeas) {
   if (iMeas >= 0 && iMeas < (int)Measurements.size()) {
     TH1* Hist = Measurements[iMeas].Histogram;
     Hist->SetLineColor(SampleColour);
+    Hist->SetLineStyle(LineStyle);
+    Hist->SetLineWidth(2);
     return Hist;
   }
 
@@ -262,10 +263,16 @@ void SampleManager<T>::Plot1DRatioHists(TCanvas* Canv, std::vector<TH1*> Hists) 
     Legends[iSamp] = new TLegend(0.8,0.9-(1.0+static_cast<T>(iSamp))*LegendHeight,0.99,0.9-static_cast<T>(iSamp)*LegendHeight);
     Legends[iSamp]->SetTextSize(FontSize);
     Legends[iSamp]->AddEntry(Hists[iSamp],(Samples[iSamp]->GetName()).c_str(),"l");
-    Legends[iSamp]->AddEntry((TObject*)0,Form("Mean: %4.5f",Hists[iSamp]->GetMean()),"");
-    Legends[iSamp]->AddEntry((TObject*)0,Form("RMS: %4.5f",Hists[iSamp]->GetRMS()),"");
+    //Legends[iSamp]->AddEntry((TObject*)0,Form("Mean: %4.5f",Hists[iSamp]->GetMean()),"");
+    //Legends[iSamp]->AddEntry((TObject*)0,Form("RMS: %4.5f",Hists[iSamp]->GetRMS()),"");
     Legends[iSamp]->Draw();
   }
+  
+  TLatex latex;
+  latex.SetNDC();                 // use normalized coordinates (0 → 1)
+  latex.SetTextSize(0.04);        // adjust size
+  latex.SetTextFont(42);          // nice standard font
+  latex.DrawLatex(0.25, 0.85, "#bf{DUNE} Work in Progress");
 
   Canv->Print(OutputFileName_1D.c_str());
 }
@@ -301,11 +308,17 @@ void SampleManager<T>::Plot1DHists(TCanvas* Canv, std::vector<TH1*> Hists) {
     Legends[iSamp]->SetTextSize(FontSize);
     Legends[iSamp]->AddEntry(Hists[iSamp],(Samples[iSamp]->GetName()).c_str(),"l");
     Legends[iSamp]->AddEntry((TObject*)0,Form("Entries: %4.5f",Hists[iSamp]->GetEntries()),"");
-    Legends[iSamp]->AddEntry((TObject*)0,Form("Integral: %4.5f",Hists[iSamp]->Integral()),"");
-    Legends[iSamp]->AddEntry((TObject*)0,Form("Mean: %4.5f",Hists[iSamp]->GetMean()),"");
-    Legends[iSamp]->AddEntry((TObject*)0,Form("RMS: %4.5f",Hists[iSamp]->GetRMS()),"");
+    //Legends[iSamp]->AddEntry((TObject*)0,Form("Integral: %4.5f",Hists[iSamp]->Integral()),"");
+    //Legends[iSamp]->AddEntry((TObject*)0,Form("Mean: %4.5f",Hists[iSamp]->GetMean()),"");
+    //Legends[iSamp]->AddEntry((TObject*)0,Form("RMS: %4.5f",Hists[iSamp]->GetRMS()),"");
     Legends[iSamp]->Draw();
   }
+
+  TLatex latex;
+  latex.SetNDC();                 // use normalized coordinates (0 → 1)
+  latex.SetTextSize(0.04);        // adjust size
+  latex.SetTextFont(42);          // nice standard font
+  latex.DrawLatex(0.25, 0.85, "#bf{DUNE} Work in Progress");
 
   Canv->Print(OutputFileName_1D.c_str());
 }
@@ -382,6 +395,8 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   int NominalIndex = IndexToRatioTo;
 
   TCanvas* Canv = new TCanvas;
+  Canv->SetTickx();
+  Canv->SetTicky();
   Canv->SetRightMargin(0.2);
   Canv->SetLeftMargin(0.15);
   Canv->Print((OutputFileName_1D+"[").c_str());
@@ -394,6 +409,9 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
     Hists[iSamp] = Samples[iSamp]->GetAnalysisBinningHistogram();
     Hists[iSamp]->SetStats(false);
+    Hists[iSamp]->GetXaxis()->CenterTitle();
+    Hists[iSamp]->GetYaxis()->CenterTitle();
+    Hists[iSamp]->SetLineWidth(2);
   }
 
   Plot1DHists(Canv, Hists);
@@ -445,7 +463,16 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
     }
   }
   CovarianceMatrix->SetStats(false);
+  TLatex latex;
+  latex.SetNDC();                 // use normalized coordinates (0 → 1)
+  latex.SetTextSize(0.04);        // adjust size
+  latex.SetTextFont(42);          // nice standard font
+  
+  CovarianceMatrix->GetXaxis()->CenterTitle();
+  CovarianceMatrix->GetYaxis()->CenterTitle();
+
   CovarianceMatrix->Draw("COLZ");
+  latex.DrawLatex(0.25, 0.85, "#bf{DUNE} Work in Progress");
 
   TFile *output_root_file = new TFile(OutputRootName.c_str(), "RECREATE");
   CovarianceMatrix->Write("covariance");
@@ -457,7 +484,14 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
     CovarianceMatrixDiag->SetBinContent(xBin+1,TMath::Sqrt(CovarianceMatrix->GetBinContent(xBin+1,xBin+1)));
     CovarianceMatrixDiag->SetBinError(xBin+1,0.5/TMath::Sqrt(CovarianceMatrix->GetBinContent(xBin+1,xBin+1))*CovarianceMatrix->GetBinError(xBin+1,xBin+1));
   }
+  CovarianceMatrixDiag->SetLineWidth(2);
+  CovarianceMatrixDiag->GetXaxis()->CenterTitle();
+  CovarianceMatrixDiag->GetYaxis()->CenterTitle();
   CovarianceMatrixDiag->Draw();
+  latex.DrawLatex(0.25, 0.85, "#bf{DUNE} Work in Progress");
+
+  CovarianceMatrixDiag->Write("covarianceDiag");
+
   Canv->Print(OutputFileName_1D.c_str());
 
   CorrelationMatrix->SetStats(false);
@@ -470,7 +504,11 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
       }
     }
   }
+
+  CorrelationMatrix->GetXaxis()->CenterTitle();
+  CorrelationMatrix->GetYaxis()->CenterTitle();
   CorrelationMatrix->Draw("COLZ");
+  latex.DrawLatex(0.25, 0.85, "#bf{DUNE} Work in Progress");
   CorrelationMatrix->Write("correlation");
   output_root_file->Close();
 
@@ -521,6 +559,8 @@ void SampleManager<T>::Plot1D(YAML::Node Config) {
   }
 
   TCanvas* Canv = new TCanvas;
+  Canv->SetTickx();
+  Canv->SetTicky();
   Canv->SetRightMargin(0.2);
   Canv->SetLeftMargin(0.15);
   Canv->Print((OutputFileName_1D+"[").c_str());
@@ -555,6 +595,8 @@ void SampleManager<T>::Plot2D(YAML::Node Config) {
   DrawOptions_2D = Config["DrawOpts"].as<std::string>();
 
   TCanvas* Canv = new TCanvas;
+  Canv->SetTickx();
+  Canv->SetTicky();
   Canv->SetRightMargin(0.2);
   Canv->SetLeftMargin(0.15);
   Canv->Print((OutputFileName_2D+"[").c_str());
@@ -577,6 +619,8 @@ void SampleManager<T>::Plot2D(YAML::Node Config) {
       Hists[iSamp] = Samples[iSamp]->GetMeasurement(iObs);
       Hists[iSamp]->SetTitle(Samples[iSamp]->GetName().c_str());
       Hists[iSamp]->SetStats(false);
+      Hists[iSamp]->GetXaxis()->CenterTitle();
+      Hists[iSamp]->GetYaxis()->CenterTitle();      
 
       Hists[iSamp]->Draw(DrawOptions_2D.c_str());
       Canv->Print(OutputFileName_2D.c_str());

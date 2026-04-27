@@ -91,9 +91,9 @@ Observable<T>::Observable(YAML::Node ObservableConfig) {
   } else if (nDimensions == 1) {
     std::string HistName = Name+"_0";
     std::string HistTitle = Axes[0].Label;
-    for (size_t iCut=0;iCut<Cuts.size();iCut++) {
+    /*for (size_t iCut=0;iCut<Cuts.size();iCut++) {
       HistTitle += " ("+std::string(Form("%4.2f",Cuts[iCut].LowerBound))+"<"+Cuts[iCut].Variable+"<"+Form("%4.2f",Cuts[iCut].UpperBound)+")";
-    }
+    }*/
     HistTitle += ";"+Axes[0].Label+";Number of Events";
     int nBins = Axes[0].Binning.size()-1;
     

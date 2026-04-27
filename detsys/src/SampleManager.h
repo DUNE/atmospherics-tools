@@ -24,6 +24,7 @@ class Sample {
  private:
   std::string Name;
   int SampleColour;
+  int LineStyle;
   std::string FilePath;
   std::string TupleName;
 

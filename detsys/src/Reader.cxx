@@ -154,6 +154,8 @@ const T Reader<T>::ReturnKinematicParameter(int Par) {
     return (_data.erec - _data.ev)/_data.ev;
   case kNuCosZRes:
     return (_data.RecoCZ - _data.TrueCZ)/_data.TrueCZ;
+  case kNuCosZResAbs:
+    return (_data.RecoCZ - _data.TrueCZ);
   case kNuVertX:
     return _data.vtx_x;
   case kNuVertY:
@@ -230,6 +232,7 @@ void Reader<T>::UpdateData(){
     _data.Selection = Unsel;
     _data.cvn_numu = _BAD_VALUE_;
     _data.cvn_nue = _BAD_VALUE_;
+    //std::cout<<"unselected because of pandora size: "<<_sr->common.ixn.pandora.size()<<std::endl;
     return;
   }
  
@@ -282,11 +285,33 @@ void Reader<T>::UpdateData(){
     std::vector<std::string> AnalysisBinningVars = AnalysisBinning->GetSelectionBinVars(_data.Selection);
     
     std::vector<T> EventDetails(AnalysisBinningVars.size());
+    bool validEvent = true;
+
     for (size_t iBinVar=0;iBinVar<AnalysisBinningVars.size();iBinVar++) {
       EventDetails[iBinVar] = ReturnKinematicParameter(Kinematic_StringToInt(AnalysisBinningVars[iBinVar]));
+      
+      if (!std::isfinite(EventDetails[iBinVar])) {
+        std::cerr << "Skipping event due to invalid kinematic parameter: "
+                      << AnalysisBinningVars[iBinVar]
+                      << " = " << EventDetails[iBinVar] << std::endl;
+        validEvent = false;
+        break;
+      }
+      if (EventDetails[iBinVar] < -1e8 || EventDetails[iBinVar] >1e8){
+        std::cerr << "Skipping event due to invalid kinematic parameter: "
+                      << AnalysisBinningVars[iBinVar]
+                      << " = " << EventDetails[iBinVar] << std::endl;
+        validEvent = false;
+        break;
+      } 
     }
-    
-    _data.AnalysisBinIndex = AnalysisBinning->GetBin(_data.Selection,EventDetails);
+    if (validEvent) {
+      _data.AnalysisBinIndex = AnalysisBinning->GetBin(_data.Selection, EventDetails);
+    } else {
+      _data.AnalysisBinIndex = -1;  // mark as invalid
+      _data.weight = 0;
+      return;  // skip further processing
+    }    
   }  
 }
 
