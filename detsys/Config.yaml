@@ -25,32 +25,16 @@ DrawOptions:
 
 Samples:
   - Name: "Nominal" #Sample Identifier name
-    #FilePath: "/exp/dune/data/users/atonazzo/DetSys/data/atm-ref/" #Path to directory which contains the set of CAF files to use for this sample. It will grab all "*.root" files within that directory
-    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Nominal_2k/"
+    FilePath: "/exp/dune/data/users/atonazzo/DetSys/data/atm-ref/" #Path to directory which contains the set of CAF files to use for this sample. It will grab all "*.root" files within that directory
+    #FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Nominal_2k/"
     SubDirectoryName: "cafmaker" #The CAF files are expected to contain the 'cafTree', 'meta' and 'genieEvt' TTrees. Sometimes, but not all the time, these TTrees are contained in a subdirectory (i.e. 'cafmaker')
     Colour: 1 #Colour from ROOT Colour Wheel
     LineStyle: 1
-  - Name: "#splitline{Detector variation}{Mod. Box A = 0.99}"
-    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Recombination_alpha_high_2k/"
-    #FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Detsim_Recombinationp3sig"
+  - Name: "#splitline{Detector variation}{Mod. Box A = 0.99, B = 0.207}"
+    #FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Recombination_alpha_high_2k/"
+    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Detsim_Recombinationp3sig"
     SubDirectoryName: "cafmaker"
     Colour: 8
-    LineStyle: 1
-  - Name: "#splitline{Detector variation}{Mod. Box A = 0.87}"
-    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Recombination_alpha_low_2k/"
-    #FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Detsim_Recombinationm3sig"
-    SubDirectoryName: "cafmaker"
-    Colour: 4
-    LineStyle: 1
-  - Name: "#splitline{Wiremod}{Mod. Box A = 0.99}"
-    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Wiremod_Recombination_alpha_high_1k/"
-    SubDirectoryName: "cafmaker"
-    Colour: 6
-    LineStyle: 2
-  - Name: "#splitline{Wiremod}{Mod. Box A = 0.87}"
-    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Wiremod_Recombination_alpha_low_1k/"
-    SubDirectoryName: "cafmaker"
-    Colour: 2
     LineStyle: 2
 
 #The next node defines the bins which would be used in some oscillation analysis. By defining the analysis bins, we can calculate the change in normalisation of each analysis bin for a variation of a parameter. This can then be used to calculate a covariance matrix to include bin-to-bin correlations.
@@ -212,7 +196,9 @@ Observables:
     Axes:
       - Variable: "kSelection"
         Label: "Selection"
-        BinDefinition: [4,-0.5,3.5]
+        #BinDefinition: [4,-0.5,3.5]
+        BinDefinition: [3,-0.5,2.5]
+        BinLabels: ["CC #nu_{e}", "CC #nu_{#mu}", "NC"]
 
 Fluxes:
   FluxDir: "/cvmfs/dune.osgstorage.org/pnfs/fnal.gov/usr/dune/persistent/stash/TaskForce_Flux/atmos/Honda_interp/"

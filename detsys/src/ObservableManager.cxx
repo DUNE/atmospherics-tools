@@ -42,8 +42,15 @@ Observable<T>::Observable(YAML::Node ObservableConfig) {
       Binning.push_back(HighBinEdge);
 
       A.Binning = Binning;
+
     }
-    
+    if (AxisNode["BinLabels"]){
+      A.BinLabels = AxisNode["BinLabels"].as<std::vector<std::string>>();
+      if (A.BinLabels.size()!=A.Binning.size()-1){
+        std::cerr << "Number of bin labels does not match number of bins for variable "<<A.Variable<<std::endl;
+        throw;
+      }
+    }
     Axes.emplace_back(A);
   }
 
@@ -102,6 +109,13 @@ Observable<T>::Observable(YAML::Node ObservableConfig) {
     } else {
       HistTemplate = new TH1D(HistName.c_str(),HistTitle.c_str(),nBins,Axes[0].Binning.data());
     }
+    for (size_t iBin = 0; iBin < Axes[0].BinLabels.size(); iBin++){
+      HistTemplate->GetXaxis()->SetBinLabel(iBin+1, Axes[0].BinLabels[iBin].c_str());
+    }
+    if (Axes[0].BinLabels.size() > 0){ 
+      HistTemplate->GetXaxis()->CenterLabels(true);
+      HistTemplate->GetXaxis()->SetLabelSize(0.05);
+    }
   } else if (nDimensions == 2) {
     std::string HistName = Name+"_0";
 
@@ -120,7 +134,20 @@ Observable<T>::Observable(YAML::Node ObservableConfig) {
     } else {
       HistTemplate = new TH2D(HistName.c_str(),HistTitle.c_str(),nXBins,Axes[0].Binning.data(),nYBins,Axes[1].Binning.data());
     }
-
+    for (size_t iBin = 0; iBin < Axes[0].BinLabels.size(); iBin++){
+      HistTemplate->GetXaxis()->SetBinLabel(iBin+1, Axes[0].BinLabels[iBin].c_str());
+    }
+    for (size_t iBin = 0; iBin < Axes[1].BinLabels.size(); iBin++){
+      HistTemplate->GetYaxis()->SetBinLabel(iBin+1, Axes[1].BinLabels[iBin].c_str());
+    }
+    if (Axes[0].BinLabels.size() > 0){ 
+      HistTemplate->GetXaxis()->CenterLabels(true);
+      HistTemplate->GetXaxis()->SetLabelSize(0.05);
+    }
+    if (Axes[1].BinLabels.size() > 0){ 
+      HistTemplate->GetYaxis()->CenterLabels(true);
+      HistTemplate->GetYaxis()->SetLabelSize(0.05);
+    }
   } else {
     std::cerr << "Currently only have support for 1 and 2 dimension observables" << std::endl;
     throw;

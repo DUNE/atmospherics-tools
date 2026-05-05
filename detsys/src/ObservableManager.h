@@ -18,6 +18,7 @@ struct Axis {
   std::string Label;
   int Variable_Int;
   std::vector<T> Binning;
+  std::vector<std::string> BinLabels; //optional
   bool isLog;
 };
 
