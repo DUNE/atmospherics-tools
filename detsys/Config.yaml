@@ -1,0 +1,269 @@
+General:
+  ScaleNormalisationTo: "Nominal" #Optional - Normalises the integral of all the distributions to the defined sample. The defined sample must match one of the [Samples][Name] nodes defined below
+
+DrawOptions:
+  AnalysisBinning:
+    OutputName: "AnalysisBinningPlots.pdf" #Output of the file which has all the AnalysisBinningPlots
+    OutputRootName: "AnalysisBinning.root" #name of the output file that will contain the covariance and correlation matrices	
+    DrawOpts: "HIST E1" #Used for both full plot and the ratio plot
+    NominalSample: "Nominal" #Must match one of the [Samples][Name] nodes defined below
+    LegendHeight: 0.15 #Optional - Defines the height of each legend box
+    LegendFontSize: 0.02 #Optional - Defines the font size used in each legend box
+
+  OneDimension:
+    OutputName: "1DPlots.pdf" #Output of the file which has all the 1D plots
+    DrawOpts: "HIST E1" #Used for both full plot and the ratio plot
+    RatioDenominatorSample: "Nominal" #Must match one of the [Samples][Name] nodes defined below
+    LegendHeight: 0.15 #Optional - Defines the height of each legend box
+    LegendFontSize: 0.02 #Optional - Defines the font size used in each legend box
+    #RatioMaximum: 1.2 #Optional - Defines the maximum of the Y-axis used in the ratio plot. If commented out, automatic range will be calculated
+    #RatioMinimum: 0.8 #Optional - Defines the minimum of the Y-axis used in the ratio plot. If commented out, automatic range will be calculated
+
+  TwoDimension:
+    OutputName: "2DPlots.pdf" #Output of the file which has all the 1D plots
+    DrawOpts: "COLZ" #Used for full plot drawing options add TEXT0 to put the text back on
+
+Samples:
+  - Name: "Nominal" #Sample Identifier name
+    #FilePath: "/exp/dune/data/users/atonazzo/DetSys/data/atm-ref/" #Path to directory which contains the set of CAF files to use for this sample. It will grab all "*.root" files within that directory
+    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Nominal_2k/"
+    SubDirectoryName: "cafmaker" #The CAF files are expected to contain the 'cafTree', 'meta' and 'genieEvt' TTrees. Sometimes, but not all the time, these TTrees are contained in a subdirectory (i.e. 'cafmaker')
+    Colour: 1 #Colour from ROOT Colour Wheel
+    LineStyle: 1
+  - Name: "#splitline{Detector variation}{Mod. Box A = 0.99}"
+    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Recombination_alpha_high_2k/"
+    #FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Detsim_Recombinationp3sig"
+    SubDirectoryName: "cafmaker"
+    Colour: 8
+    LineStyle: 1
+  - Name: "#splitline{Detector variation}{Mod. Box A = 0.87}"
+    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Recombination_alpha_low_2k/"
+    #FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Detsim_Recombinationm3sig"
+    SubDirectoryName: "cafmaker"
+    Colour: 4
+    LineStyle: 1
+  - Name: "#splitline{Wiremod}{Mod. Box A = 0.99}"
+    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Wiremod_Recombination_alpha_high_1k/"
+    SubDirectoryName: "cafmaker"
+    Colour: 6
+    LineStyle: 2
+  - Name: "#splitline{Wiremod}{Mod. Box A = 0.87}"
+    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Wiremod_Recombination_alpha_low_1k/"
+    SubDirectoryName: "cafmaker"
+    Colour: 2
+    LineStyle: 2
+
+#The next node defines the bins which would be used in some oscillation analysis. By defining the analysis bins, we can calculate the change in normalisation of each analysis bin for a variation of a parameter. This can then be used to calculate a covariance matrix to include bin-to-bin correlations.
+
+#The number of axes [and bin edges per axis] for each selection can be any number and the number of axes does not have to be identical per each selection. The analysis binning 1D distribution counts up in indices of the minor axis, then major axis. For the example:
+
+
+AnalysisBinning:
+  - Selection: "NuMu" #Selection Name
+    kSelection: 1 #Index which matches one of the selection enums defined here: https://github.com/DUNE/atmospherics-tools/blob/b25e0400f2a571a4e4b6e4bddee58579e7dc37b0/detsys/src/Constants.h#L5-L10
+    #kNuRecoCosZ: [-1.001, -0.6, -0.2, 0.2, 0.6, 1.001]
+    kNuRecoCosZ: [-1.001, 1.001]
+    #kNuERec: [0,  0.23, 0.31, 0.47, 0.81, 1e8]
+    kNuERec: [0, 0.31, 0.81, 1e8] #for alpha variations
+  - Selection: "NuE"
+    kSelection: 0
+    #kNuRecoCosZ: [-1.001, -0.6, -0.2, 0.2, 0.6, 1.001]
+    kNuRecoCosZ: [-1.001, 1.001]
+    #kNuERec: [0,  0.23, 0.31, 0.47, 0.81, 1.28, 1.99, 3.17, 5.38, 1e8]
+    kNuERec: [0,  0.31, 0.47, 0.81, 1.99, 5.38, 1e8] #for alpha variations
+
+#The way in which variables are grabbed from the MC is as follows:
+#First, the [Observables][Axes][Variable] string is converted to an enum here: https://github.com/DUNE/atmospherics-tools/blob/b25e0400f2a571a4e4b6e4bddee58579e7dc37b0/detsys/src/Constants.h#L17-L34
+
+#Second, the mapping of that enum to a CAF variable is done through this function: https://github.com/DUNE/atmospherics-tools/blob/b25e0400f2a571a4e4b6e4bddee58579e7dc37b0/detsys/src/Reader.cxx#L131-L141
+#This returns any variable stored in the 'Data' struct: https://github.com/DUNE/atmospherics-tools/blob/b25e0400f2a571a4e4b6e4bddee58579e7dc37b0/detsys/src/Data.h#L6
+#Which get filled from the CAF file e.g. here: https://github.com/DUNE/atmospherics-tools/blob/b25e0400f2a571a4e4b6e4bddee58579e7dc37b0/detsys/src/Reader.cxx#L150
+
+Observables:
+  - Name: "Reconstructed Cosine Zenith" #Observable Identifier name
+    Axes: #Can have one or two axes per observable
+      - Variable: "kNuRecoCosZ" #String used to determine which CAF variable gets returned for this axis.
+        Label: "Reconstructed Cosine Zenith" #Axes title used in plotting
+        Binning: [-1.001,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.001] #Bin edges used for axis
+      - Variable: "kNuTrueCosZ"
+        Label: "True Cosine Zenith"
+        Binning: [-1.001,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.001]
+
+  - Name: "Reconstructed Energy"
+    Axes: 
+      - Variable: "kNuERec"
+        IsLog: true
+        Label: "Reconstructed Energy"
+        Binning: [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 10.0]
+      - Variable: "kNuETrue"
+        IsLog: true
+        Label: "True Energy"
+        Binning: [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 10.0]
+
+  - Name: "Residual Energy"
+    Axes:
+      - Variable: "kNuERes"
+        Label: "Relative Residual Energy"
+        Binning: [-1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.4, 1.8, 2.5, 3.5, 5.0]
+
+  - Name: "Residual Cosine Zenith"
+    Axes:
+      - Variable: "kNuCosZResAbs"
+        Label: "Residual Cosine Zenith"
+        Binning: [-2.5, -2., -1.5, -1., -0.5, 0., 0.5, 1.0, 1.5, 2., 2.5]
+
+  - Name: "Reco Cosine Zenith"
+    Axes:
+      - Variable: "kNuRecoCosZ"
+        Label: "Reco Cosine Zenith"
+        Binning: [-1.001,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.001]
+
+  - Name: "Reco Cosine Zenith - CC #nu_{e}"
+    Axes:
+      - Variable: "kNuRecoCosZ"
+        Label: "Reco Cosine Zenith - CC #nu_{e}"
+        Binning: [-1.001,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.001]
+    Cuts:
+      - Variable: "kSelection"
+        LowerBound: -0.5
+        UpperBound: 0.5
+
+  - Name: "Reco Cosine Zenith - CC #nu_{#mu}"
+    Axes:
+      - Variable: "kNuRecoCosZ"
+        Label: "Reco Cosine Zenith - CC #nu_{#mu}"
+        Binning: [-1.001,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.001]
+    Cuts:
+      - Variable: "kSelection"        
+        LowerBound: 0.5
+        UpperBound: 1.5
+
+  - Name: "Reco Cosine Zenith - NC"
+    Axes:
+      - Variable: "kNuRecoCosZ"
+        Label: "Reco Cosine Zenith - NC"
+        Binning: [-1.001,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.001]
+    Cuts:
+      - Variable: "kSelection"
+        LowerBound: 1.5
+        UpperBound: 2.5
+
+  - Name: "Reco Neutrino Energy"
+    Axes:
+      - Variable: "kNuERec"
+        IsLog: true
+        Label: "Reco Neutrino Energy [GeV]"
+        Binning: [0.05,0.2,0.4,0.6,0.8,1.2,1.6,2.0,4.0,10.]
+
+  - Name: "Reco Neutrino Energy - CC #nu_{e}"
+    Axes:
+      - Variable: "kNuERec"
+        IsLog: true
+        Label: "Reco Neutrino Energy - CC #nu_{e} [GeV]"
+        Binning: [0.05,  0.23, 0.31, 0.47, 0.81, 1.28, 1.99, 3.17, 5.38, 10] #[0.05,0.2,0.4,0.6,0.8,1.2,1.6,2.0,4.0,10.]
+    Cuts:
+      - Variable: "kSelection"
+        LowerBound: -0.5
+        UpperBound: 0.5
+
+  - Name: "Reco Neutrino Energy - CC #nu_{#mu}"
+    Axes:
+      - Variable: "kNuERec"
+        IsLog: true
+        Label: "Reco Neutrino Energy - CC #nu_{#mu} [GeV]"
+        #Binning: [0.05,0.2,0.4,0.6,0.8,1.2,1.6,2.0,4.0,10.]
+        Binning: [0.05, 0.23, 0.31, 0.47, 0.81, 1.28, 1.99, 5.38, 10]
+    Cuts:
+      - Variable: "kSelection"
+        LowerBound: 0.5
+        UpperBound: 1.5
+
+  - Name: "Reco Neutrino Energy - NC"
+    Axes:
+      - Variable: "kNuERec"
+        IsLog: true
+        Label: "Reco Neutrino Energy - NC [GeV]"
+        Binning: [0.05,0.2,0.4,0.6,0.8,1.2,1.6,2.0,4.0,10.]
+    Cuts:
+      - Variable: "kSelection"
+        LowerBound: 1.5
+        UpperBound: 2.5
+
+  - Name: "True Cosine Zenith"
+    Axes:
+      - Variable: "kNuTrueCosZ"
+        Label: "True Cosine Zenith"
+        Binning: [-1.001,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.001]
+
+  - Name: "CVN CC #nu_{#mu}"
+    Axes:
+      - Variable: "kCVNNuMu"
+        Label: "CVN NuMu"
+        BinDefinition: [10,0.,1.]
+
+
+  - Name: "CVN CC #nu_{e}"
+    Axes:
+      - Variable: "kCVNNuE"
+        Label: "CVN NuE"
+        BinDefinition: [10,0.,1.]
+
+  - Name: "Selection"
+    Axes:
+      - Variable: "kSelection"
+        Label: "Selection"
+        BinDefinition: [4,-0.5,3.5]
+
+Fluxes:
+  FluxDir: "/cvmfs/dune.osgstorage.org/pnfs/fnal.gov/usr/dune/persistent/stash/TaskForce_Flux/atmos/Honda_interp/"
+  nue: "honda_2d_homestake_2015_nue.root"
+  nuebar: "honda_2d_homestake_2015_nuebar.root"
+  numu: "honda_2d_homestake_2015_numu.root"
+  numubar: "honda_2d_homestake_2015_numubar.root"
+  refflux: "/cvmfs/dune.osgstorage.org/pnfs/fnal.gov/usr/dune/persistent/stash/TaskForce_Flux/atmos/Honda_interp/honda_2d_homestake_2015_numu.root"
+
+NuOscillator:
+
+  General:
+    Verbosity: "NONE"
+    CosineZIgnored: false
+    CalculationType: "Binned"
+
+  Binned:
+    FileName: "./Inputs/ExampleAtmosphericBinning.root"
+    EnergyAxisHistName: "EnergyAxisBinning"
+    CosineZAxisHistName: "CosineZAxisBinning"
+
+  OscProbCalcerSetup:
+    ImplementationName: "CUDAProb3"
+    EarthModelFileName: "./build/_deps/cudaprob3-src/models/PREM_4layer.dat"
+    UseEarthModelSystematics: false
+    Layers: 4  
+    UseProductionHeightsAveraging: false
+    ProductionHeightsFileName: "./inputs/ProdHeightDist_E561_cZ520_N1_hbin2.5.root"
+    ProductionHeightsHistFlavourSuffixes:
+      Nue: "nue"
+      Numu: "numu"
+      Nutau: "numu"
+      Nuebar: "nuebar"
+      Numubar: "numubar"
+      Nutaubar: "numubar"
+    OscChannelMapping:
+      - Entry: "Electron:Electron"
+      - Entry: "Electron:Muon"
+      - Entry: "Electron:Tau"
+      - Entry: "Muon:Electron"
+      - Entry: "Muon:Muon"
+      - Entry: "Muon:Tau"
+      - Entry: "Tau:Electron"
+      - Entry: "Tau:Muon"
+      - Entry: "Tau:Tau"
+
+  OscillationParameters:
+    sin2_th12: 3.07e-1
+    sin2_th23: 5.28e-1
+    sin2_th13: 2.18e-2
+    dm2_12: 7.53e-5
+    dm2_23: 2.509e-3
+    delta_cp: -1.601
+    prod_h: 25
