@@ -94,6 +94,7 @@ void Sample<T>::SetAnalysisBinning(AnalysisBinningManager<T>* AnalysisBinning_) 
   AnalysisBinning = AnalysisBinning_;
 
   AnalysisBinningHistogram = new TH1D((Name+"_AnalysisBinning").c_str(),"Analysis Binning;Bin Number;Events",AnalysisBinning->GetNBins(),0,AnalysisBinning->GetNBins());
+  AnalysisBinningHistogram->Sumw2();
   AnalysisBinningHistogram->SetLineColor(SampleColour);
   AnalysisBinningHistogram->SetLineStyle(LineStyle);
   AnalysisBinningHistogram->SetLineWidth(2);
