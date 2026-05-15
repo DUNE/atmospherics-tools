@@ -170,6 +170,8 @@ const T Reader<T>::ReturnKinematicParameter(int Par) {
     return _data.NuMomZ;
   case kAnalysisBin:
     return _data.AnalysisBinIndex;
+  case kTrueInt:
+    return _data.trueInt;
   }
 
 
@@ -220,8 +222,15 @@ void Reader<T>::UpdateData(){
   _data.NuMomX = _sr->mc.nu[0].momentum.x;
   _data.NuMomY = _sr->mc.nu[0].momentum.y;
   _data.NuMomZ = _sr->mc.nu[0].momentum.z;
+  _data.isCC = _sr->mc.nu[0].iscc;
   _data.nuPDG = _sr->mc.nu[0].pdg;
   _data.mode = _sr->mc.nu[0].mode;
+
+  _data.trueInt = Truth::Other;
+  if (_data.isCC){
+    if (std::abs(_data.nuPDG)==12) _data.trueInt = Truth::CCNuE;
+    else if (std::abs(_data.nuPDG)==14) _data.trueInt = Truth::CCNuMu;
+  }
 
   TVector3 TrueNuMomentumVector = (TVector3(_sr->mc.nu[0].momentum.X(),_sr->mc.nu[0].momentum.Y(),_sr->mc.nu[0].momentum.Z())).Unit();
   _data.TrueCZ = -TrueNuMomentumVector.Y();

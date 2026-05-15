@@ -10,6 +10,12 @@ enum Sel{
   nSelections
 };
 
+enum Truth{
+  Other = 0,
+  CCNuE = 1,
+  CCNuMu = 2
+};
+
 const double _BAD_VALUE_ = -999;
 
 const double cvn_numu = 0.56;
@@ -33,6 +39,7 @@ enum KinematicParameters {
   kNuMomY,
   kNuMomZ,
   kAnalysisBin,
+  kTrueInt,
   nKinPars
 };
 
@@ -87,6 +94,9 @@ inline int Kinematic_StringToInt(std::string Str) {
   }
   if (Str == "kAnalysisBin") {
     return kAnalysisBin;
+  }
+  if (Str == "kTrueInt") {
+    return kTrueInt;
   }
 
   std::cerr << "Did not find std::string -> int mapping for string:" << Str << std::endl;

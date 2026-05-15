@@ -178,22 +178,22 @@ Observables:
         Label: "Reco Neutrino Energy [GeV]"
         Binning: [0.05,0.2,0.4,0.6,0.8,1.2,1.6,2.0,4.0,10.]
 
-  - Name: "Reco Neutrino Energy - CC #nu_{e}"
+  - Name: "Reco Neutrino Energy - Selected CC #nu_{e}"
     Axes:
       - Variable: "kNuERec"
         IsLog: true
-        Label: "Reco Neutrino Energy - CC #nu_{e} [GeV]"
+        Label: "Reco Neutrino Energy [GeV]"
         Binning: [0.05,  0.23, 0.31, 0.47, 0.81, 1.28, 1.99, 3.17, 5.38, 10] #[0.05,0.2,0.4,0.6,0.8,1.2,1.6,2.0,4.0,10.]
     Cuts:
       - Variable: "kSelection"
         LowerBound: -0.5
         UpperBound: 0.5
 
-  - Name: "Reco Neutrino Energy - CC #nu_{#mu}"
+  - Name: "Reco Neutrino Energy - Selected CC #nu_{#mu}"
     Axes:
       - Variable: "kNuERec"
         IsLog: true
-        Label: "Reco Neutrino Energy - CC #nu_{#mu} [GeV]"
+        Label: "Reco Neutrino Energy [GeV]"
         #Binning: [0.05,0.2,0.4,0.6,0.8,1.2,1.6,2.0,4.0,10.]
         Binning: [0.05, 0.23, 0.31, 0.47, 0.81, 1.28, 1.99, 5.38, 10]
     Cuts:
@@ -201,14 +201,37 @@ Observables:
         LowerBound: 0.5
         UpperBound: 1.5
 
-  - Name: "Reco Neutrino Energy - NC"
+  - Name: "Reco Neutrino Energy - Selected NC"
     Axes:
       - Variable: "kNuERec"
         IsLog: true
-        Label: "Reco Neutrino Energy - NC [GeV]"
+        Label: "Reco Neutrino Energy [GeV]"
         Binning: [0.05,0.2,0.4,0.6,0.8,1.2,1.6,2.0,4.0,10.]
     Cuts:
       - Variable: "kSelection"
+        LowerBound: 1.5
+        UpperBound: 2.5
+
+  - Name: "Reco Neutrino Energy - True CC #nu_{e}"
+    Axes:
+      - Variable: "kNuERec"
+        IsLog: true
+        Label: "Reco Neutrino Energy [GeV]"
+        Binning: [0.05,  0.23, 0.31, 0.47, 0.81, 1.28, 1.99, 3.17, 5.38, 10] #[0.05,0.2,0.4,0.6,0.8,1.2,1.6,2.0,4.0,10.]
+    Cuts:
+      - Variable: "kTrueInt"
+        LowerBound: 0.5
+        UpperBound: 1.5
+
+  - Name: "Reco Neutrino Energy - True CC #nu_{#mu}"
+    Axes:
+      - Variable: "kNuERec"
+        IsLog: true
+        Label: "Reco Neutrino Energy [GeV]"
+        #Binning: [0.05,0.2,0.4,0.6,0.8,1.2,1.6,2.0,4.0,10.]
+        Binning: [0.05, 0.23, 0.31, 0.47, 0.81, 1.28, 1.99, 5.38, 10]
+    Cuts:
+      - Variable: "kTrueInt"
         LowerBound: 1.5
         UpperBound: 2.5
 
