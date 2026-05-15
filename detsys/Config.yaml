@@ -7,15 +7,16 @@ DrawOptions:
     OutputRootName: "AnalysisBinning.root" #name of the output file that will contain the covariance and correlation matrices	
     DrawOpts: "HIST E1" #Used for both full plot and the ratio plot
     NominalSample: "Nominal" #Must match one of the [Samples][Name] nodes defined below
-    LegendHeight: 0.15 #Optional - Defines the height of each legend box
-    LegendFontSize: 0.02 #Optional - Defines the font size used in each legend box
-
+    LegendHeight: 0.1 #Optional - Defines the height of each legend box
+    LegendFontSize: 0.025 #Optional - Defines the font size used in each legend box
+    BinLabels: ["#splitline{CC #nu_{#mu}}{0.00 - 0.31 GeV}", "#splitline{CC #nu_{#mu}}{0.31 - 0.81 GeV}", "#splitline{CC #nu_{#mu}}{0.81 - 1e8 GeV}", "#splitline{CC #nu_{e}}{0 - 0.31 GeV}", "#splitline{CC #nu_{e}}{0.31 - 0.47 GeV}", "#splitline{CC #nu_{e}}{0.47 - 0.81 GeV}", "#splitline{CC #nu_{e}}{0.81 - 1.99 GeV}", "#splitline{CC #nu_{e}}{1.99 - 5.38 GeV}", "#splitline{CC #nu_{e}}{5.38 - 1e8 GeV}"]    
+  
   OneDimension:
     OutputName: "1DPlots.pdf" #Output of the file which has all the 1D plots
     DrawOpts: "HIST E1" #Used for both full plot and the ratio plot
     RatioDenominatorSample: "Nominal" #Must match one of the [Samples][Name] nodes defined below
-    LegendHeight: 0.15 #Optional - Defines the height of each legend box
-    LegendFontSize: 0.02 #Optional - Defines the font size used in each legend box
+    LegendHeight: 0.1 #Optional - Defines the height of each legend box
+    LegendFontSize: 0.025 #Optional - Defines the font size used in each legend box
     #RatioMaximum: 1.2 #Optional - Defines the maximum of the Y-axis used in the ratio plot. If commented out, automatic range will be calculated
     #RatioMinimum: 0.8 #Optional - Defines the minimum of the Y-axis used in the ratio plot. If commented out, automatic range will be calculated
 
@@ -30,12 +31,50 @@ Samples:
     SubDirectoryName: "cafmaker" #The CAF files are expected to contain the 'cafTree', 'meta' and 'genieEvt' TTrees. Sometimes, but not all the time, these TTrees are contained in a subdirectory (i.e. 'cafmaker')
     Colour: 1 #Colour from ROOT Colour Wheel
     LineStyle: 1
-  - Name: "#splitline{Detector variation}{Mod. Box A = 0.99, B = 0.207}"
-    #FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Recombination_alpha_high_2k/"
+  - Name: "#splitline{Detector variation}{Mod. Box A = 0.99}"
     FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Detsim_Recombinationp3sig"
+    #FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Recombination_alpha_high_2k/"
     SubDirectoryName: "cafmaker"
-    Colour: 8
-    LineStyle: 2
+    Colour: 865
+    LineStyle: 1
+  - Name: "#splitline{Detector variation}{Mod. Box A = 0.87}"
+    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Detsim_Recombinationm3sig"
+    #FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Recombination_alpha_low_2k/" 
+    SubDirectoryName: "cafmaker"
+    Colour: 807
+    LineStyle: 1
+#  - Name: "#splitline{Wiremod}{Mod. Box A = 0.99}"
+#    #FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Wiremod_Recombinationp3sig"
+#    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Wiremod_Recombination_alpha_high_1k/"
+#    SubDirectoryName: "cafmaker"
+#    Colour: 603
+#    LineStyle: 2
+#  - Name: "#splitline{Wiremod}{Mod. Box A = 0.87}"
+#    #FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Wiremod_Recombinationm3sig"
+#    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Wiremod_Recombination_alpha_low_1k/"
+#    SubDirectoryName: "cafmaker"
+#    Colour: 793
+#    LineStyle: 2
+#  - Name: "#splitline{Detector variation}{#tau = 12.48 ms}"
+#    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Detsim_lifetime12480/"
+#    SubDirectoryName: "cafmaker"
+#    Colour: 865
+#    LineStyle: 1
+#  - Name: "#splitline{Detector variation}{#tau = 8.32 ms}"
+#    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Detsim_lifetime8320/"
+#    SubDirectoryName: "cafmaker"
+#    Colour: 807
+#    LineStyle: 1
+#  - Name: "#splitline{Wiremod}{#tau = 12.48 ms}"
+#    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Wiremod_lifetime12480/"
+#    SubDirectoryName: "cafmaker"
+#    Colour: 603
+#    LineStyle: 2
+#  - Name: "#splitline{Wiremod}{#tau = 8.32 ms}"
+#    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Wiremod_lifetime8320/"
+#    SubDirectoryName: "cafmaker"
+#    Colour: 793
+#    LineStyle: 2
 
 #The next node defines the bins which would be used in some oscillation analysis. By defining the analysis bins, we can calculate the change in normalisation of each analysis bin for a variation of a parameter. This can then be used to calculate a covariance matrix to include bin-to-bin correlations.
 
@@ -183,14 +222,16 @@ Observables:
     Axes:
       - Variable: "kCVNNuMu"
         Label: "CVN NuMu"
-        BinDefinition: [10,0.,1.]
+        #BinDefinition: [10,0.,1.]
+        Binning: [0, 0.05, 0.1, 0.3, 0.5, 0.7, 0.9, 0.95, 1]
 
 
   - Name: "CVN CC #nu_{e}"
     Axes:
       - Variable: "kCVNNuE"
         Label: "CVN NuE"
-        BinDefinition: [10,0.,1.]
+        #BinDefinition: [10,0.,1.]
+        Binning: [0, 0.05, 0.1, 0.3, 0.5, 0.7, 0.9, 0.95, 1]
 
   - Name: "Selection"
     Axes:

@@ -97,7 +97,8 @@ Observable<T>::Observable(YAML::Node ObservableConfig) {
     throw;
   } else if (nDimensions == 1) {
     std::string HistName = Name+"_0";
-    std::string HistTitle = Axes[0].Label;
+    //std::string HistTitle = Axes[0].Label;
+    std::string HistTitle = Name;
     /*for (size_t iCut=0;iCut<Cuts.size();iCut++) {
       HistTitle += " ("+std::string(Form("%4.2f",Cuts[iCut].LowerBound))+"<"+Cuts[iCut].Variable+"<"+Form("%4.2f",Cuts[iCut].UpperBound)+")";
     }*/

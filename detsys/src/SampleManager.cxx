@@ -264,6 +264,7 @@ void SampleManager<T>::Plot1DRatioHists(TCanvas* Canv, std::vector<TH1*> Hists) 
     Legends[iSamp] = new TLegend(0.8,0.9-(1.0+static_cast<T>(iSamp))*LegendHeight,0.99,0.9-static_cast<T>(iSamp)*LegendHeight);
     Legends[iSamp]->SetTextSize(FontSize);
     Legends[iSamp]->AddEntry(Hists[iSamp],(Samples[iSamp]->GetName()).c_str(),"l");
+    //Legends[iSamp]->AddEntry((TObject*)0,Form("Entries: %4.5f",Hists[iSamp]->GetEntries()),"");
     //Legends[iSamp]->AddEntry((TObject*)0,Form("Mean: %4.5f",Hists[iSamp]->GetMean()),"");
     //Legends[iSamp]->AddEntry((TObject*)0,Form("RMS: %4.5f",Hists[iSamp]->GetRMS()),"");
     Legends[iSamp]->Draw();
@@ -308,7 +309,7 @@ void SampleManager<T>::Plot1DHists(TCanvas* Canv, std::vector<TH1*> Hists) {
     Legends[iSamp] = new TLegend(0.8,0.9-(1.0+static_cast<T>(iSamp))*LegendHeight,0.99,0.9-static_cast<T>(iSamp)*LegendHeight);
     Legends[iSamp]->SetTextSize(FontSize);
     Legends[iSamp]->AddEntry(Hists[iSamp],(Samples[iSamp]->GetName()).c_str(),"l");
-    Legends[iSamp]->AddEntry((TObject*)0,Form("Entries: %4.5f",Hists[iSamp]->GetEntries()),"");
+    //Legends[iSamp]->AddEntry((TObject*)0,Form("Entries: %4.5f",Hists[iSamp]->GetEntries()),"");
     //Legends[iSamp]->AddEntry((TObject*)0,Form("Integral: %4.5f",Hists[iSamp]->Integral()),"");
     //Legends[iSamp]->AddEntry((TObject*)0,Form("Mean: %4.5f",Hists[iSamp]->GetMean()),"");
     //Legends[iSamp]->AddEntry((TObject*)0,Form("RMS: %4.5f",Hists[iSamp]->GetRMS()),"");
@@ -379,6 +380,11 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
     FontSize = Config["LegendFontSize"].as<T>();
   }
 
+  std::vector<std::string> BinLabels;
+  if (Config["BinLabels"]){
+    BinLabels = Config["BinLabels"].as<std::vector<std::string>>();
+  }
+
   IndexToRatioTo = -1;
   for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
     if (Samples[iSamp]->GetName() == SampleNameToRatioTo) {
@@ -398,8 +404,10 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   TCanvas* Canv = new TCanvas;
   Canv->SetTickx();
   Canv->SetTicky();
+  Canv->SetGridx();
   Canv->SetRightMargin(0.2);
   Canv->SetLeftMargin(0.15);
+  Canv->SetBottomMargin(0.2);
   Canv->Print((OutputFileName_1D+"[").c_str());
 
   std::vector<TH1*> Hists(Samples.size());
@@ -412,7 +420,21 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
     Hists[iSamp]->SetStats(false);
     Hists[iSamp]->GetXaxis()->CenterTitle();
     Hists[iSamp]->GetYaxis()->CenterTitle();
+    if (BinLabels.size()>0){
+      if (BinLabels.size()!=static_cast<std::size_t>(Hists[iSamp]->GetNbinsX())){
+        std::cerr<<"Invalid number of bin labels for analysis binning histogram"<<std::endl;
+        throw;
+      }
+      else{
+        for (size_t iBin = 0; iBin < BinLabels.size(); iBin++){
+          Hists[iSamp]->GetXaxis()->SetBinLabel(iBin+1, BinLabels[iBin].c_str());
+          Hists[iSamp]->GetXaxis()->SetTitle("");
+          Hists[iSamp]->GetXaxis()->LabelsOption("v");
+        }
+      }
+    }
     Hists[iSamp]->SetLineWidth(2);
+    Hists[iSamp]->GetXaxis()->CenterLabels(true);
   }
 
   Plot1DHists(Canv, Hists);
@@ -468,10 +490,20 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   latex.SetNDC();                 // use normalized coordinates (0 → 1)
   latex.SetTextSize(0.04);        // adjust size
   latex.SetTextFont(42);          // nice standard font
-  
+  Canv->SetGridx(false);
   CovarianceMatrix->GetXaxis()->CenterTitle();
   CovarianceMatrix->GetYaxis()->CenterTitle();
-
+  if (BinLabels.size()!=0){
+    for (size_t iBin = 0; iBin < BinLabels.size(); iBin++){
+      CovarianceMatrix->GetXaxis()->SetBinLabel(iBin+1, BinLabels[iBin].c_str());
+      CovarianceMatrix->GetYaxis()->SetBinLabel(iBin+1, BinLabels[iBin].c_str());
+      CovarianceMatrix->GetXaxis()->SetTitle("");
+      CovarianceMatrix->GetYaxis()->SetTitle("");
+      CovarianceMatrix->GetXaxis()->LabelsOption("v");
+    } 
+  }
+  CovarianceMatrix->GetXaxis()->CenterLabels(true);
+  CovarianceMatrix->GetYaxis()->CenterLabels(true);
   CovarianceMatrix->Draw("COLZ");
   latex.DrawLatex(0.25, 0.85, "#bf{DUNE} Work in Progress");
 
@@ -479,17 +511,25 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   CovarianceMatrix->Write("covariance");
 
   Canv->Print(OutputFileName_1D.c_str());
-
+  Canv->SetGridx();
   CovarianceMatrixDiag->SetStats(false);
   for (int xBin=0;xBin<nBins;xBin++) {
     CovarianceMatrixDiag->SetBinContent(xBin+1,TMath::Sqrt(CovarianceMatrix->GetBinContent(xBin+1,xBin+1)));
-    CovarianceMatrixDiag->SetBinError(xBin+1,0.5/TMath::Sqrt(CovarianceMatrix->GetBinContent(xBin+1,xBin+1))*CovarianceMatrix->GetBinError(xBin+1,xBin+1));
+    //CovarianceMatrixDiag->SetBinError(xBin+1,0.5/TMath::Sqrt(CovarianceMatrix->GetBinContent(xBin+1,xBin+1))*CovarianceMatrix->GetBinError(xBin+1,xBin+1));
   }
   CovarianceMatrixDiag->SetLineWidth(2);
   CovarianceMatrixDiag->GetXaxis()->CenterTitle();
+  if (BinLabels.size()!=0){
+    for (size_t iBin = 0; iBin < BinLabels.size(); iBin++){
+      CovarianceMatrixDiag->GetXaxis()->SetBinLabel(iBin+1, BinLabels[iBin].c_str());
+      CovarianceMatrixDiag->GetXaxis()->SetTitle("");
+      CovarianceMatrixDiag->GetXaxis()->LabelsOption("v");
+    }
+  }
+  CovarianceMatrixDiag->GetXaxis()->CenterLabels(true);
   CovarianceMatrixDiag->GetYaxis()->CenterTitle();
-  CovarianceMatrixDiag->Draw();
-  latex.DrawLatex(0.25, 0.85, "#bf{DUNE} Work in Progress");
+  CovarianceMatrixDiag->Draw("HIST");
+  latex.DrawLatex(0.45, 0.85, "#bf{DUNE} Work in Progress");
 
   CovarianceMatrixDiag->Write("covarianceDiag");
 
@@ -506,6 +546,18 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
     }
   }
 
+
+  if (BinLabels.size()!=0){
+    for (size_t iBin = 0; iBin < BinLabels.size(); iBin++){
+      CorrelationMatrix->GetXaxis()->SetBinLabel(iBin+1, BinLabels[iBin].c_str());
+      CorrelationMatrix->GetYaxis()->SetBinLabel(iBin+1, BinLabels[iBin].c_str());
+      CorrelationMatrix->GetXaxis()->SetTitle("");
+      CorrelationMatrix->GetYaxis()->SetTitle("");
+      CorrelationMatrix->GetXaxis()->LabelsOption("v");
+    }
+  }
+  CorrelationMatrix->GetXaxis()->CenterLabels(true);
+  CorrelationMatrix->GetYaxis()->CenterLabels(true);
   CorrelationMatrix->GetXaxis()->CenterTitle();
   CorrelationMatrix->GetYaxis()->CenterTitle();
   CorrelationMatrix->Draw("COLZ");
