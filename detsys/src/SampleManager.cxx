@@ -1,6 +1,9 @@
 #include "SampleManager.h"
 #include "TLatex.h"
 #include "TLegend.h"
+#include "TLine.h"
+
+
 
 template<typename T>
 Sample<T>::Sample(YAML::Node SampleConfig) {
@@ -325,6 +328,145 @@ void SampleManager<T>::Plot1DHists(TCanvas* Canv, std::vector<TH1*> Hists) {
   Canv->Print(OutputFileName_1D.c_str());
 }
 
+
+template<typename T>
+void SampleManager<T>::Plot1DWithRatio(TCanvas* Canv, std::vector<TH1*> Hists) {
+  Canv->cd();
+
+  std::vector<TLegend*> Legends(Hists.size());
+
+  TPad* pad1 = new TPad("pad1","pad1",0.0,0.30,1.0,1.0);
+  TPad* pad2 = new TPad("pad2","pad2",0.0,0.00,1.0,0.30);
+
+  pad1->SetBottomMargin(0.02);
+  pad2->SetTopMargin(0.05);
+  pad2->SetBottomMargin(0.30);
+  pad1->SetLeftMargin(0.12);
+  pad2->SetLeftMargin(0.12);
+
+  if (Canv->GetLogx()) {
+    pad1->SetLogx();
+    pad2->SetLogx();
+  }
+
+  pad1->Draw();
+  pad2->Draw();
+
+  pad1->cd();
+
+  double Max = -1e8;
+  double Min =  1e8;
+
+  for (size_t iSamp=0;iSamp<Hists.size();iSamp++) {
+    for (int xBin=1;xBin<=Hists[iSamp]->GetNbinsX();xBin++) {
+
+      double up =
+        Hists[iSamp]->GetBinContent(xBin) +
+        Hists[iSamp]->GetBinError(xBin);
+
+      double down =
+        Hists[iSamp]->GetBinContent(xBin) -
+        Hists[iSamp]->GetBinError(xBin);
+
+      if (up > Max)   Max = up;
+      if (down < Min) Min = down;
+    }
+  }
+
+  for (size_t iSamp=0;iSamp<Hists.size();iSamp++) {
+
+    Hists[iSamp]->GetYaxis()->SetRangeUser(
+      Min - 0.1*(Max-Min),
+      Max + 0.1*(Max-Min)
+    );
+
+    Hists[iSamp]->GetXaxis()->SetLabelSize(0);
+
+    if (iSamp==0) {
+      Hists[iSamp]->Draw(DrawOptions_1D.c_str());
+    } else {
+      Hists[iSamp]->Draw((DrawOptions_1D+" SAME").c_str());
+    }
+    Legends[iSamp] = new TLegend(0.8,0.9-(1.0+static_cast<T>(iSamp))*LegendHeight,0.99,0.9-static_cast<T>(iSamp)*LegendHeight);
+    Legends[iSamp]->SetTextSize(FontSize);
+    Legends[iSamp]->AddEntry(Hists[iSamp],(Samples[iSamp]->GetName()).c_str(),"l");
+    Legends[iSamp]->Draw();
+  }
+
+  TLatex latex;
+  latex.SetNDC();
+  latex.SetTextSize(0.04);
+  latex.SetTextFont(42);
+  latex.DrawLatex(0.25,0.85,"#bf{DUNE} Work in Progress");
+
+  pad2->cd();
+
+  std::vector<TH1*> RatioHists(Hists.size());
+
+  for (size_t iSamp=0;iSamp<Hists.size();iSamp++) {
+
+    RatioHists[iSamp] =
+      static_cast<TH1*>(
+        Hists[iSamp]->Clone(
+          Form("%s_ratio",Hists[iSamp]->GetName())
+        )
+      );
+
+    RatioHists[iSamp]->Divide(Hists[IndexToRatioTo]);
+
+
+    RatioHists[iSamp]->SetTitle("");
+    RatioHists[iSamp]->GetXaxis()->SetTitle(Hists[iSamp]->GetXaxis()->GetTitle());
+    RatioHists[iSamp]->GetYaxis()->SetTitle(
+      std::string("Ratio to "+SampleNameToRatioTo).c_str()
+    );
+
+    RatioHists[iSamp]->GetYaxis()->CenterTitle();
+    RatioHists[iSamp]->GetXaxis()->CenterTitle();
+
+    RatioHists[iSamp]->GetYaxis()->SetTitleSize(0.08);
+    RatioHists[iSamp]->GetYaxis()->SetLabelSize(0.08);
+
+    RatioHists[iSamp]->GetXaxis()->SetTitleSize(0.10);
+    RatioHists[iSamp]->GetXaxis()->SetLabelSize(0.10);
+
+    RatioHists[iSamp]->GetYaxis()->SetNdivisions(505);
+
+    RatioHists[iSamp]->GetYaxis()->SetRangeUser(0.9,1.1);
+    RatioHists[iSamp]->GetYaxis()->SetTitleOffset(0.6);
+    if (static_cast<int>(iSamp) == IndexToRatioTo) {
+
+      for (int xBin=1;
+           xBin<=RatioHists[iSamp]->GetNbinsX();
+           xBin++) {
+
+        RatioHists[iSamp]->SetBinContent(xBin,1.0);
+        RatioHists[iSamp]->SetBinError(xBin,0.0);
+      }
+    }
+
+    if (iSamp==0) {
+      RatioHists[iSamp]->Draw(DrawOptions_1D.c_str());
+    } else {
+      RatioHists[iSamp]->Draw((DrawOptions_1D+" SAME").c_str());
+    }
+  }
+
+  double xmin =
+    RatioHists[0]->GetXaxis()->GetXmin();
+
+  double xmax =
+    RatioHists[0]->GetXaxis()->GetXmax();
+
+  TLine* line = new TLine(xmin,1.0,xmax,1.0);
+
+  line->SetLineStyle(2);
+  line->Draw("SAME");
+
+  Canv->Print(OutputFileName_1D.c_str());
+
+}
+
 template<typename T>
 T SampleManager<T>::CalculateCovariance(T XNominalBinContent, std::vector<T> XVariedBinContents, T YNominalBinContent, std::vector<T> YVariedBinContents) {
   T Covariance = 0.;
@@ -369,6 +511,10 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   DrawOptions_1D = Config["DrawOpts"].as<std::string>();
   std::string NominalSample = Config["NominalSample"].as<std::string>();
   SampleNameToRatioTo = NominalSample;
+  int plotRatiosSameCanvas = 0;
+  if (Config["RatioSameCanvas"]){
+    plotRatiosSameCanvas = Config["RatioSameCanvas"].as<int>();
+  }
 
   LegendHeight = 0.2;
   if (Config["LegendHeight"]) {
@@ -437,8 +583,14 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
     Hists[iSamp]->GetXaxis()->CenterLabels(true);
   }
 
-  Plot1DHists(Canv, Hists);
-  Plot1DRatioHists(Canv, Hists);
+
+  if (plotRatiosSameCanvas){
+    Plot1DWithRatio(Canv, Hists);
+  }
+  else {
+    Plot1DHists(Canv, Hists);
+    Plot1DRatioHists(Canv, Hists);
+  }
 
   //===============================================================================
   //Calculate the covariance matrix
@@ -577,6 +729,11 @@ void SampleManager<T>::Plot1D(YAML::Node Config) {
   DrawOptions_1D = Config["DrawOpts"].as<std::string>();
   SampleNameToRatioTo = Config["RatioDenominatorSample"].as<std::string>();
 
+  int plotRatiosSameCanvas = 0;
+  if (Config["RatioSameCanvas"]){
+    plotRatiosSameCanvas = Config["RatioSameCanvas"].as<int>();
+  }
+
   LegendHeight = 0.2;
   if (Config["LegendHeight"]) {
     LegendHeight = Config["LegendHeight"].as<T>();
@@ -634,8 +791,12 @@ void SampleManager<T>::Plot1D(YAML::Node Config) {
       Hists[iSamp]->SetStats(false);
     }
 
-    Plot1DHists(Canv, Hists);
-    Plot1DRatioHists(Canv, Hists);
+
+    if (plotRatiosSameCanvas) Plot1DWithRatio(Canv, Hists);
+    else{
+      Plot1DHists(Canv, Hists);
+      Plot1DRatioHists(Canv, Hists);
+    }
   }
 
   Canv->Print((OutputFileName_1D+"]").c_str());
