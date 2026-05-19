@@ -148,8 +148,24 @@ const T Reader<T>::ReturnKinematicParameter(int Par) {
     return _data.Selection;
   case kNuETrue:
     return _data.ev;
+  case kHadERec:
+    return _data.had_erec;
+  case kHadNuMuERec:
+    return _data.had_numu_erec;
+  case kHadNuEERec:
+    return _data.had_nue_erec;
+  case kLepERec:
+    return _data.lep_erec;
+  case kMuERec:
+    return _data.mu_erec;
+  case keERec:
+    return _data.e_erec;
   case kNuERec:
     return _data.erec;
+  case kNuMuERec:
+    return _data.erec_numu;
+  case kNuEERec:
+    return _data.erec_nue;
   case kNuERes:
     return (_data.erec - _data.ev)/_data.ev;
   case kNuCosZRes:
@@ -173,7 +189,6 @@ const T Reader<T>::ReturnKinematicParameter(int Par) {
   case kTrueInt:
     return _data.trueInt;
   }
-
 
   std::cerr << "Invalid kinematic parameter requested:" << Par << std::endl;
   throw;
@@ -226,7 +241,7 @@ void Reader<T>::UpdateData(){
   _data.nuPDG = _sr->mc.nu[0].pdg;
   _data.mode = _sr->mc.nu[0].mode;
 
-  _data.trueInt = Truth::Other;
+  _data.trueInt = Truth::NC;
   if (_data.isCC){
     if (std::abs(_data.nuPDG)==12) _data.trueInt = Truth::CCNuE;
     else if (std::abs(_data.nuPDG)==14) _data.trueInt = Truth::CCNuMu;
@@ -236,11 +251,20 @@ void Reader<T>::UpdateData(){
   _data.TrueCZ = -TrueNuMomentumVector.Y();
   
   if(_sr->common.ixn.pandora.size() != 1){
+    _data.had_erec = _BAD_VALUE_;
+    _data.lep_erec = _BAD_VALUE_;
     _data.erec = _BAD_VALUE_;
+    _data.had_numu_erec = _BAD_VALUE_;
+    _data.mu_erec = _BAD_VALUE_;
+    _data.erec_numu = _BAD_VALUE_;
+    _data.had_nue_erec = _BAD_VALUE_;
+    _data.e_erec = _BAD_VALUE_;
+    _data.erec_nue = _BAD_VALUE_;
     _data.RecoCZ = _BAD_VALUE_;
     _data.Selection = Unsel;
     _data.cvn_numu = _BAD_VALUE_;
     _data.cvn_nue = _BAD_VALUE_;
+    _data.trueInt = Truth::Other;
     //std::cout<<"unselected because of pandora size: "<<_sr->common.ixn.pandora.size()<<std::endl;
     return;
   }
@@ -273,18 +297,31 @@ void Reader<T>::UpdateData(){
   }
 
   if (_data.Selection == Sel::SelNC) {
+    _data.had_erec = _sr->common.ixn.pandora[0].Enu.calo;
     _data.erec = _sr->common.ixn.pandora[0].Enu.calo;
     _data.RecoCZ = -_sr->common.ixn.pandora[0].dir.heshw.y;
   } else if (_data.Selection == Sel::SelNuMu) {
     _data.erec = _sr->common.ixn.pandora[0].Enu.lep_calo;
+    _data.had_erec = _sr->common.ixn.pandora[0].Enu.mu_had;
+    _data.lep_erec = _data.erec - _data.had_erec;
     _data.RecoCZ = -_sr->common.ixn.pandora[0].dir.lngtrk.y;
   } else if (_data.Selection == Sel::SelNuE) {
     _data.erec = _sr->common.ixn.pandora[0].Enu.e_calo;
+    _data.had_erec = _sr->common.ixn.pandora[0].Enu.e_had;
+    _data.lep_erec = _data.erec - _data.had_erec;
     _data.RecoCZ = -_sr->common.ixn.pandora[0].dir.heshw.y;
   } else {
     std::cerr << "Invalid selection" << std::endl;
     throw;
   }
+
+  _data.had_numu_erec =  _sr->common.ixn.pandora[0].Enu.mu_had;
+  _data.had_nue_erec =  _sr->common.ixn.pandora[0].Enu.e_had;
+  _data.erec_numu =  _sr->common.ixn.pandora[0].Enu.lep_calo;
+  _data.erec_nue =  _sr->common.ixn.pandora[0].Enu.e_calo;
+  _data.mu_erec = _data.erec_numu - _data.had_numu_erec;
+  _data.e_erec = _data.erec_nue - _data.had_nue_erec;
+
 
   if (std::isnan(_data.RecoCZ)) {
     return;

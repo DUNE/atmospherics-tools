@@ -13,7 +13,8 @@ enum Sel{
 enum Truth{
   Other = 0,
   CCNuE = 1,
-  CCNuMu = 2
+  CCNuMu = 2,
+  NC = 3
 };
 
 const double _BAD_VALUE_ = -999;
@@ -27,7 +28,15 @@ enum KinematicParameters {
   kCVNNuMu,
   kCVNNuE,
   kSelection,
+  kHadERec,
+  kHadNuMuERec,
+  kHadNuEERec,
+  kLepERec,
+  kMuERec,
+  keERec,
   kNuERec,
+  kNuEERec,
+  kNuMuERec,
   kNuETrue,
   kNuERes,
   kNuCosZRes,
@@ -59,8 +68,32 @@ inline int Kinematic_StringToInt(std::string Str) {
   if (Str == "kSelection") {
     return kSelection;
   }
+  if (Str == "kHadERec") {
+    return kHadERec;
+  }
+  if (Str == "kHadNuMuERec") {
+    return kHadNuMuERec;
+  }
+  if (Str == "kHadNuEERec") {
+    return kHadNuEERec;
+  }
+  if (Str == "kLepERec") {
+    return kLepERec;
+  }
+  if (Str == "kMuERec") {
+    return kMuERec;
+  }
+  if (Str == "keERec") {
+    return keERec;
+  }
   if (Str == "kNuERec") {
     return kNuERec;
+  }
+  if (Str == "kNuMuERec") {
+    return kNuMuERec;
+  }
+  if (Str == "kNuEERec") {
+    return kNuEERec;
   }
   if (Str== "kNuETrue") {
     return kNuETrue;
