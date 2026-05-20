@@ -156,6 +156,8 @@ const T Reader<T>::ReturnKinematicParameter(int Par) {
     return _data.had_numu_erec;
   case kHadNuEERec:
     return _data.had_nue_erec;
+  case kCaloERec:
+    return _data.calo_erec;
   case kLepERec:
     return _data.lep_erec;
   case kMuERec:
@@ -271,15 +273,18 @@ void Reader<T>::UpdateData(){
     return;
   }
  
-  /*if(_fname == "./data/Deprecated/Recombination_n1Sig"){ 
+
+
+  // TODO: fix this! Make this a mandatory argument in the yaml file
+  if(_fname == "./data/Deprecated/Recombination_n1Sig"){ 
       _data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.numu;
   }
   else{
       _data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.nc;
-  }*/
+  }
 
-  _data.cvn_nc = _sr->common.ixn.pandora[0].nuhyp.cvn.nc;
-  _data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.numu;
+  //_data.cvn_nc = _sr->common.ixn.pandora[0].nuhyp.cvn.nc;
+  //_data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.numu;
   _data.cvn_nue = _sr->common.ixn.pandora[0].nuhyp.cvn.nue;
 
 
@@ -288,10 +293,10 @@ void Reader<T>::UpdateData(){
   
 
   _data.Selection = Sel::SelNC;
-  if(_sr->common.ixn.pandora[0].nuhyp.cvn.numu > cvn_numu){
+  if(_data.cvn_numu > cvn_numu){
     _data.Selection = Sel::SelNuMu;
   }
-  else if(_sr->common.ixn.pandora[0].nuhyp.cvn.nue > cvn_nue){
+  else if(_data.cvn_nue > cvn_nue){
     _data.Selection = Sel::SelNuE;
   }
 
@@ -320,7 +325,7 @@ void Reader<T>::UpdateData(){
   _data.erec_nue =  _sr->common.ixn.pandora[0].Enu.e_calo;
   _data.mu_erec = _data.erec_numu - _data.had_numu_erec;
   _data.e_erec = _data.erec_nue - _data.had_nue_erec;
-
+  _data.calo_erec = _sr->common.ixn.pandora[0].Enu.calo;
 
   if (std::isnan(_data.RecoCZ)) {
     return;
