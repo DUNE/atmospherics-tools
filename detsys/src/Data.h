@@ -12,6 +12,7 @@ struct Data
   T had_erec;
   T had_numu_erec;
   T had_nue_erec;
+  T calo_erec;
   T lep_erec;
   T mu_erec;
   T e_erec;
@@ -69,6 +70,7 @@ static inline Data<double> float2double(const Data<float>& data){
   data_D.had_erec = data.had_erec;
   data_D.had_numu_erec = data.had_numu_erec;
   data_D.had_nue_erec = data.had_nue_erec;
+  data_D.calo_erec = data.calo_erec;
   data_D.lep_erec = data.lep_erec;
   data_D.mu_erec = data.mu_erec;
   data_D.e_erec = data.e_erec;

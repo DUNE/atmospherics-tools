@@ -32,6 +32,7 @@ enum KinematicParameters {
   kHadERec,
   kHadNuMuERec,
   kHadNuEERec,
+  kCaloERec,
   kLepERec,
   kMuERec,
   keERec,
@@ -80,6 +81,9 @@ inline int Kinematic_StringToInt(std::string Str) {
   }
   if (Str == "kHadNuEERec") {
     return kHadNuEERec;
+  }
+  if (Str == "kCaloERec") {
+    return kCaloERec;
   }
   if (Str == "kLepERec") {
     return kLepERec;
