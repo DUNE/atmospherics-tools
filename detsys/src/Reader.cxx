@@ -144,6 +144,8 @@ const T Reader<T>::ReturnKinematicParameter(int Par) {
     return _data.cvn_numu;
   case kCVNNuE:
     return _data.cvn_nue;
+  case kCVNNC:
+    return _data.cvn_nc;
   case kSelection:
     return _data.Selection;
   case kNuETrue:
@@ -269,24 +271,21 @@ void Reader<T>::UpdateData(){
     return;
   }
  
-  if(_fname == "./data/Deprecated/Recombination_n1Sig"){ 
+  /*if(_fname == "./data/Deprecated/Recombination_n1Sig"){ 
       _data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.numu;
   }
   else{
       _data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.nc;
-  }
+  }*/
 
+  _data.cvn_nc = _sr->common.ixn.pandora[0].nuhyp.cvn.nc;
+  _data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.numu;
   _data.cvn_nue = _sr->common.ixn.pandora[0].nuhyp.cvn.nue;
 
-  /*
-  SelNuE = 0,
-  SelNuMu = 1,
-  SelNC = 2,
-  Unsel = 3,
 
-  std::vector<T> CVNScores = {_sr->common.ixn.pandora[0].nuhyp.cvn.nue, _sr->common.ixn.pandora[0].nuhyp.cvn.numu, _sr->common.ixn.pandora[0].nuhyp.cvn.nc};
-  _data.Selection = arg_max(CVNScores);
-  */
+  //std::vector<T> CVNScores = {_sr->common.ixn.pandora[0].nuhyp.cvn.nue, _sr->common.ixn.pandora[0].nuhyp.cvn.numu, _sr->common.ixn.pandora[0].nuhyp.cvn.nc};
+  //_data.Selection = arg_max(CVNScores);
+  
 
   _data.Selection = Sel::SelNC;
   if(_sr->common.ixn.pandora[0].nuhyp.cvn.numu > cvn_numu){

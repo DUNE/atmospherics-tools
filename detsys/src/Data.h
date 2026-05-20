@@ -27,6 +27,7 @@ struct Data
   T LepMomZ;
   T cvnnumu;
   T cvnnue;
+  T cvnnc;
   int isCC;
   int nuPDGunosc;
   int nuPDG;
@@ -43,6 +44,7 @@ struct Data
   T TrueCZ;
   T cvn_numu;
   T cvn_nue;
+  T cvn_nc;
   double weight; //Have to hardcode that here for now.
   double genie_weight; //Have to hardcode that here for now.
   T flux_nue;

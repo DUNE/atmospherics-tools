@@ -27,6 +27,7 @@ enum KinematicParameters {
   kNuTrueCosZ,
   kCVNNuMu,
   kCVNNuE,
+  kCVNNC,
   kSelection,
   kHadERec,
   kHadNuMuERec,
@@ -64,6 +65,9 @@ inline int Kinematic_StringToInt(std::string Str) {
   }
   if (Str == "kCVNNuE") {
     return kCVNNuE;
+  }
+  if (Str == "kCVNNC") {
+    return kCVNNC;
   }
   if (Str == "kSelection") {
     return kSelection;
