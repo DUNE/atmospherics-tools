@@ -28,6 +28,7 @@ class Observable {
   std::string Name;
   int nDimensions; 
   TH1* HistTemplate;
+  TH1* DifferenceHistTemplate;
   std::vector< Cut<T> > Cuts;
   
   std::vector<Axis<T>> Axes;
@@ -35,6 +36,7 @@ class Observable {
   Observable(YAML::Node Config);
 
   TH1* ReturnTemplateHistogram() {return HistTemplate;}
+  TH1* GetDifferenceHistTemplate() const { return DifferenceHistTemplate; }
   std::vector< Cut<T> > GetCuts() {return Cuts;}
   int GetVariable(int iAxis) {return (Axes.at(iAxis)).Variable_Int;}
   bool GetIsLog(int iAxis) {return (Axes.at(iAxis)).isLog;}
@@ -54,6 +56,8 @@ class ObservableManager {
   }
 
   int GetNObservables() {return Observables.size();}
+  const std::vector<Observable<T>>& GetObservables() const {return Observables;}
+
 };
 
 template class Observable<float>;

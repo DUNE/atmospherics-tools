@@ -155,6 +155,49 @@ Observable<T>::Observable(YAML::Node ObservableConfig) {
   }
 
   HistTemplate->SetDirectory(0);
+
+  if (nDimensions == 1) {
+
+  std::string DiffHistName =
+    Name + "_Difference";
+
+  std::string DiffHistTitle =
+    Name + " Difference;"
+    + Axes[0].Label
+    + " Difference;Matched Events";
+
+  int nBins = Axes[0].Binning.size() - 1;
+
+  T maxAbs = std::max(
+    std::abs(Axes[0].Binning.front()),
+    std::abs(Axes[0].Binning.back())
+  );
+
+  if (typeid(T) == typeid(float)) {
+
+    DifferenceHistTemplate = new TH1F(
+      DiffHistName.c_str(),
+      DiffHistTitle.c_str(),
+      nBins,
+      -maxAbs,
+      maxAbs
+    );
+
+  } else {
+
+    DifferenceHistTemplate = new TH1D(
+      DiffHistName.c_str(),
+      DiffHistTitle.c_str(),
+      nBins,
+      -maxAbs,
+      maxAbs
+    );
+  }
+
+  DifferenceHistTemplate->SetDirectory(0);
+  }
+
+
   std::cout << std::endl;
 }
 

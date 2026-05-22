@@ -518,9 +518,9 @@ void SampleManager<T>::PlotMatchedDifferences()
 
   size_t nObs = ref->EventMap.begin()->second.size();
 
-    std::vector<TH1D*> DiffHists;
+  std::vector<TH1*> DiffHists;
 
-  for (size_t i = 0; i < nObs; ++i) {
+  /*for (size_t i = 0; i < nObs; ++i) {
 
     std::string name =
       "DiffObs_" + std::to_string(i);
@@ -534,6 +534,13 @@ void SampleManager<T>::PlotMatchedDifferences()
                200,
                -5,
                5)
+    );
+  }*/
+
+  //for (auto& Obs : ObsManager->Observables) {
+  for (auto& Obs : ObsManager->GetObservables()){
+    DiffHists.push_back(
+      (TH1*)Obs.GetDifferenceHistTemplate()->Clone()
     );
   }
 
