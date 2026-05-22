@@ -434,7 +434,7 @@ void SampleManager<T>::Plot1DWithRatio(TCanvas* Canv, std::vector<TH1*> Hists) {
 
     RatioHists[iSamp]->GetYaxis()->SetRangeUser(0.9,1.1);
     RatioHists[iSamp]->GetYaxis()->SetTitleOffset(0.6);
-    if (static_cast<int>(iSamp) == IndexToRatioTo) {
+    /*if (static_cast<int>(iSamp) == IndexToRatioTo) {
 
       for (int xBin=1;
            xBin<=RatioHists[iSamp]->GetNbinsX();
@@ -443,7 +443,7 @@ void SampleManager<T>::Plot1DWithRatio(TCanvas* Canv, std::vector<TH1*> Hists) {
         RatioHists[iSamp]->SetBinContent(xBin,1.0);
         RatioHists[iSamp]->SetBinError(xBin,0.0);
       }
-    }
+    }*/
 
     if (iSamp==0) {
       RatioHists[iSamp]->Draw(DrawOptions_1D.c_str());
@@ -452,7 +452,7 @@ void SampleManager<T>::Plot1DWithRatio(TCanvas* Canv, std::vector<TH1*> Hists) {
     }
   }
 
-  double xmin =
+  /*double xmin =
     RatioHists[0]->GetXaxis()->GetXmin();
 
   double xmax =
@@ -462,7 +462,7 @@ void SampleManager<T>::Plot1DWithRatio(TCanvas* Canv, std::vector<TH1*> Hists) {
 
   line->SetLineStyle(2);
   line->Draw("SAME");
-
+*/
   Canv->Print(OutputFileName_1D.c_str());
 
 }
@@ -680,8 +680,9 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   }
   CovarianceMatrixDiag->GetXaxis()->CenterLabels(true);
   CovarianceMatrixDiag->GetYaxis()->CenterTitle();
+  CovarianceMatrixDiag->GetYaxis()->SetRangeUser(0.0, CovarianceMatrixDiag->GetMaximum()+0.005);
   CovarianceMatrixDiag->Draw("HIST");
-  latex.DrawLatex(0.45, 0.85, "#bf{DUNE} Work in Progress");
+  latex.DrawLatex(0.25, 0.85, "#bf{DUNE} Work in Progress");
 
   CovarianceMatrixDiag->Write("covarianceDiag");
 
