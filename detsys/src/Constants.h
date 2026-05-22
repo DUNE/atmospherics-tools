@@ -51,6 +51,9 @@ enum KinematicParameters {
   kNuMomZ,
   kAnalysisBin,
   kTrueInt,
+  kRun,
+  kSubrun,
+  kEvent,
   nKinPars
 };
 

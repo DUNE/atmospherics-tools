@@ -29,8 +29,8 @@ class Reader {
   Data<T> _data;
   int _nentries;
   int _entry = -1;
-  int _run;
-  int _subrun;
+  //int _run;
+  //int _subrun;
   //caf::StandardRecordProxy* _sr = nullptr;
   caf::StandardRecord* _sr = nullptr;
 

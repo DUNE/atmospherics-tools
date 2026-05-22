@@ -73,8 +73,8 @@ void Reader<T>::Open(std::string fname, std::string subfolder) {
   _Chain->SetBranchAddress("rec", &_sr);
 
   _global_chain = new TChain(globtree_name.c_str());
-  _global_chain->SetBranchAddress("run", &_run);
-  _global_chain->SetBranchAddress("subrun", &_subrun);
+  //_global_chain->SetBranchAddress("run", &_run);
+  //_global_chain->SetBranchAddress("subrun", &_subrun);
   for (auto filename : ValidFilePaths) {
     _global_chain->Add(filename.c_str());
   }
@@ -195,6 +195,12 @@ const T Reader<T>::ReturnKinematicParameter(int Par) {
     return _data.AnalysisBinIndex;
   case kTrueInt:
     return _data.trueInt;
+  case kRun:
+    return _data.run;
+  case kSubrun:
+    return _data.subrun;
+  case kEvent:
+    return _data.event;
   }
 
   std::cerr << "Invalid kinematic parameter requested:" << Par << std::endl;
@@ -240,12 +246,16 @@ void Reader<T>::UpdateData(){
   //_data.weight = 1.0;
 
   _data.AnalysisBinIndex = -1;
-  _data.run = _run;
-  _data.subrun = _subrun;
+  _data.run = _sr->meta.fd_hd.run;
+  _data.subrun = _sr->meta.fd_hd.subrun;
+  _data.event = _sr->meta.fd_hd.event;
   _data.ev = _sr->mc.nu[0].E;
   _data.NuMomX = _sr->mc.nu[0].momentum.x;
   _data.NuMomY = _sr->mc.nu[0].momentum.y;
   _data.NuMomZ = _sr->mc.nu[0].momentum.z;
+  _data.vtx_x = _sr->mc.nu[0].vtx.x;
+  _data.vtx_y = _sr->mc.nu[0].vtx.y;
+  _data.vtx_z = _sr->mc.nu[0].vtx.z;
   _data.isCC = _sr->mc.nu[0].iscc;
   _data.nuPDG = _sr->mc.nu[0].pdg;
   _data.mode = _sr->mc.nu[0].mode;

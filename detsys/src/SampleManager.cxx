@@ -91,6 +91,39 @@ void Sample<T>::ReadData() {
   }
 }
 
+
+template<typename T>
+void Sample<T>::ReadDataMapping()
+{
+  std::cout << "Reading mapping data from Sample: " << Name << std::endl;
+
+  EventMap.clear();
+
+  for (int i = 0; i < SampleReader->GetNentries(); i++) {
+
+    SampleReader->GetEntry(i);
+
+    EventKey key{
+      static_cast<int>(SampleReader->ReturnKinematicParameter(kRun)),
+      static_cast<int>(SampleReader->ReturnKinematicParameter(kSubrun)),
+      static_cast<int>(SampleReader->ReturnKinematicParameter(kEvent))
+    };
+
+    //T weight = SampleReader->GetEventWeight();
+
+    std::vector<T> obs;
+
+    // choose ONLY what you want to compare
+    for (auto& meas : Measurements) {
+      for (auto var : meas.AxisVariables) {
+        obs.push_back(SampleReader->ReturnKinematicParameter(var));
+      }
+    }
+    
+    EventMap[key] = obs;
+  }
+}
+
 template<typename T>
 void Sample<T>::SetAnalysisBinning(AnalysisBinningManager<T>* AnalysisBinning_) {
   SampleReader->SetAnalysisBinning(AnalysisBinning_);
@@ -466,6 +499,89 @@ void SampleManager<T>::Plot1DWithRatio(TCanvas* Canv, std::vector<TH1*> Hists) {
   Canv->Print(OutputFileName_1D.c_str());
 
 }
+
+template<typename T>
+void SampleManager<T>::PlotMatchedDifferences()
+{
+  if (Samples.size() < 2) {
+    std::cerr << "Need at least 2 samples for comparison" << std::endl;
+    return;
+  }
+
+  auto* ref = Samples[0];
+  auto* test = Samples[1];
+  
+  if (ref->EventMap.empty()) {
+    std::cerr << "Reference EventStore empty" << std::endl;
+    return;
+  }
+
+  size_t nObs = ref->EventMap.begin()->second.size();
+
+    std::vector<TH1D*> DiffHists;
+
+  for (size_t i = 0; i < nObs; ++i) {
+
+    std::string name =
+      "DiffObs_" + std::to_string(i);
+
+    std::string title =
+      "Observable " + std::to_string(i) + ";Difference;Events";
+
+    DiffHists.push_back(
+      new TH1D(name.c_str(),
+               title.c_str(),
+               200,
+               -5,
+               5)
+    );
+  }
+
+  int nMatched = 0;
+
+  for (const auto& [key, refObs] : ref->EventMap) {
+
+    auto it = test->EventMap.find(key);
+
+    if (it == test->EventMap.end()) {
+      continue;
+    }
+
+    const auto& testObs = it->second;
+
+    for (size_t i = 0; i < nObs; ++i) {
+
+      T diff = testObs[i] - refObs[i];
+
+      DiffHists[i]->Fill(diff);
+    }
+
+    nMatched++;
+  }
+
+  std::cout << "Matched events = "
+            << nMatched
+            << std::endl;
+
+  TCanvas* c = new TCanvas(
+    "MatchedDiffs",
+    "MatchedDiffs",
+    1200,
+    800
+  );
+
+  c->Divide(2, (nObs + 1)/2);
+
+  for (size_t i = 0; i < nObs; ++i) {
+
+    c->cd(i + 1);
+
+    DiffHists[i]->Draw();
+  }
+
+  c->SaveAs("MatchedDifferences.pdf");
+}
+
 
 template<typename T>
 T SampleManager<T>::CalculateCovariance(T XNominalBinContent, std::vector<T> XVariedBinContents, T YNominalBinContent, std::vector<T> YVariedBinContents) {

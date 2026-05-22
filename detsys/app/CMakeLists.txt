@@ -27,5 +27,16 @@ target_include_directories(ComparisonScript
   $ENV{SRPROXY_INC}
 )
 
-install(TARGETS ComparisonScript RUNTIME DESTINATION bin)
+add_executable(CompareEventByEvent
+  CompareEventByEvent.cxx
+)
+target_link_libraries(CompareEventByEvent
+  LINK_PUBLIC Utils_IO ROOT::EG ${ROOT_LIBRARIES} GENIE3::All NuOscillator yaml-cpp)
+
+target_include_directories(CompareEventByEvent
+  PRIVATE
+    $ENV{SRPROXY_INC}
+)
+
+install(TARGETS ComparisonScript CompareEventByEvent RUNTIME DESTINATION bin)
 

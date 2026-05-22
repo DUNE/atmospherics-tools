@@ -34,6 +34,7 @@ struct Data
   int nuPDG;
   int run;
   int subrun;
+  int event;
   int isFHC;
   T BeRPA_cvwgt = 1;
   T vtx_x;
@@ -92,6 +93,7 @@ static inline Data<double> float2double(const Data<float>& data){
   data_D.nuPDG = data.nuPDG;
   data_D.run = data.run;
   data_D.subrun = data.subrun;
+  data_D.event = data.event;
   data_D.isFHC = data.isFHC;
   data_D.BeRPA_cvwgt = data.BeRPA_cvwgt;
   data_D.vtx_x = data.vtx_x;

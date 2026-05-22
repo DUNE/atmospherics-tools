@@ -19,6 +19,17 @@ struct Measurement {
   std::vector<int> AxisVariables;
 };
 
+struct EventKey {
+  int run;
+  int subrun;
+  int event;
+
+  bool operator<(const EventKey& other) const {
+    return std::tie(run, subrun, event) <
+           std::tie(other.run, other.subrun, other.event);
+  }
+};
+
 template <typename T>
 class Sample {
  private:
@@ -41,11 +52,13 @@ class Sample {
   void SetObservables(ObservableManager<T>* Observable);
   void SetAnalysisBinning(AnalysisBinningManager<T>* AnalysisBinning_);
   void ReadData();
+  void ReadDataMapping();
   int GetNEvents() {return SampleReader->GetNentries();}
   float GetIntegral();
   std::string GetName() {return Name;}
   TH1* GetMeasurement(int iMeas);
   TH1* GetAnalysisBinningHistogram() {return AnalysisBinningHistogram;}
+  std::map<EventKey, std::vector<T>> EventMap;
   void SetFluxManager(FluxManager* FlxMgr_) {
     FlxMgr = FlxMgr_;
     SampleReader->SetFluxManager(FlxMgr);
@@ -101,10 +114,16 @@ class SampleManager {
     }
   }
 
+  void ReadDataMapping(){
+    for (auto& sample : Samples) {
+      sample->ReadDataMapping();
+    }
+  }
+
   void PlotAnalysisBinning(YAML::Node Config);
   void Plot1D(YAML::Node Config);
   void Plot2D(YAML::Node Config);
-
+  void PlotMatchedDifferences();
   void SetAnalysisBinning(AnalysisBinningManager<T>* AnalysisBinning_) {
     AnalysisBinning = AnalysisBinning_;
 
