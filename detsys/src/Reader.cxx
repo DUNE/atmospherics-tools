@@ -73,6 +73,8 @@ void Reader<T>::Open(std::string fname, std::string subfolder) {
   _Chain->SetBranchAddress("rec", &_sr);
 
   _global_chain = new TChain(globtree_name.c_str());
+  _global_chain->SetBranchAddress("run", &_run);
+  _global_chain->SetBranchAddress("subrun", &_subrun);
   for (auto filename : ValidFilePaths) {
     _global_chain->Add(filename.c_str());
   }
@@ -117,6 +119,7 @@ bool Reader<T>::GetEntry(int i){
   }
   
   if(retVal){
+    _global_chain->GetEntry(_Chain->GetTreeNumber());
     UpdateData();
   }
   
@@ -237,6 +240,8 @@ void Reader<T>::UpdateData(){
   //_data.weight = 1.0;
 
   _data.AnalysisBinIndex = -1;
+  _data.run = _run;
+  _data.subrun = _subrun;
   _data.ev = _sr->mc.nu[0].E;
   _data.NuMomX = _sr->mc.nu[0].momentum.x;
   _data.NuMomY = _sr->mc.nu[0].momentum.y;
