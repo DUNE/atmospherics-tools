@@ -115,11 +115,39 @@ void Sample<T>::ReadDataMapping()
 
     // choose ONLY what you want to compare
     for (auto& meas : Measurements) {
+
+      bool PassesCut = true;
+
+      for (size_t iCut = 0; iCut < meas.Cuts.size(); iCut++) {
+
+        int Variable   = meas.Cuts[iCut].Variable_Int;
+        T LowerBound   = meas.Cuts[iCut].LowerBound;
+        T UpperBound   = meas.Cuts[iCut].UpperBound;
+
+        T VariableValue =
+          SampleReader->ReturnKinematicParameter(Variable);
+
+        if (VariableValue < LowerBound) {
+          PassesCut = false;
+          break;
+        }
+
+        if (VariableValue >= UpperBound) {
+          PassesCut = false;
+          break;
+        }
+      }
+
+      /*if (!PassesCut) {
+        continue;
+      }*/
+
       for (auto var : meas.AxisVariables) {
-        obs.push_back(SampleReader->ReturnKinematicParameter(var));
+        if (PassesCut) obs.push_back(SampleReader->ReturnKinematicParameter(var));
+        else obs.push_back(-9999);
       }
     }
-    
+    //if (!obs.empty()) 
     EventMap[key] = obs;
   }
 }
@@ -520,22 +548,6 @@ void SampleManager<T>::PlotMatchedDifferences()
 
   std::vector<TH1*> DiffHists;
 
-  /*for (size_t i = 0; i < nObs; ++i) {
-
-    std::string name =
-      "DiffObs_" + std::to_string(i);
-
-    std::string title =
-      "Observable " + std::to_string(i) + ";Difference;Events";
-
-    DiffHists.push_back(
-      new TH1D(name.c_str(),
-               title.c_str(),
-               200,
-               -5,
-               5)
-    );
-  }*/
 
   //for (auto& Obs : ObsManager->Observables) {
   for (auto& Obs : ObsManager->GetObservables()){
@@ -557,12 +569,12 @@ void SampleManager<T>::PlotMatchedDifferences()
     const auto& testObs = it->second;
 
     for (size_t i = 0; i < nObs; ++i) {
+      if (refObs[i]!=0 && testObs[i]!=-9999 && refObs[i]!=-9999){
+        T diff = (testObs[i] - refObs[i])/refObs[i];
 
-      T diff = testObs[i] - refObs[i];
-
-      DiffHists[i]->Fill(diff);
+        DiffHists[i]->Fill(diff);
+      }
     }
-
     nMatched++;
   }
 
@@ -577,16 +589,15 @@ void SampleManager<T>::PlotMatchedDifferences()
     800
   );
 
-  c->Divide(2, (nObs + 1)/2);
 
   for (size_t i = 0; i < nObs; ++i) {
-
-    c->cd(i + 1);
-
     DiffHists[i]->Draw();
+
+    if (i == 0) c->Print("MatchedDifferences.pdf(");
+    else if (i == nObs-1) c->Print("MatchedDifferences.pdf)");
+    else c->Print("MatchedDifferences.pdf");
   }
 
-  c->SaveAs("MatchedDifferences.pdf");
 }
 
 

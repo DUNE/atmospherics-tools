@@ -162,16 +162,12 @@ Observable<T>::Observable(YAML::Node ObservableConfig) {
     Name + "_Difference";
 
   std::string DiffHistTitle =
-    Name + " Difference;"
+    Name + "; Relative difference of "
     + Axes[0].Label
-    + " Difference;Matched Events";
+    + ";Matched Events";
 
-  int nBins = Axes[0].Binning.size() - 1;
-
-  T maxAbs = std::max(
-    std::abs(Axes[0].Binning.front()),
-    std::abs(Axes[0].Binning.back())
-  );
+  int nBins = 100;
+  T maxAbs = 2;
 
   if (typeid(T) == typeid(float)) {
 
