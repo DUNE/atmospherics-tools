@@ -124,6 +124,7 @@ class SampleManager {
   void Plot1D(YAML::Node Config);
   void Plot2D(YAML::Node Config);
   void PlotMatchedDifferences();
+  void PlotUnMatched();
   void SetAnalysisBinning(AnalysisBinningManager<T>* AnalysisBinning_) {
     AnalysisBinning = AnalysisBinning_;
 

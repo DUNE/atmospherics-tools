@@ -599,6 +599,97 @@ void SampleManager<T>::PlotMatchedDifferences()
 
 }
 
+template<typename T>
+void SampleManager<T>::PlotUnMatched()
+{
+  if (Samples.size() < 2) {
+    std::cerr << "Need at least 2 samples for comparison" << std::endl;
+    return;
+  }
+
+  auto* ref  = Samples[0];
+  auto* test = Samples[1];
+
+  if (ref->EventMap.empty()) {
+    std::cerr << "Reference EventStore empty" << std::endl;
+    return;
+  }
+
+  size_t nObs = ref->EventMap.begin()->second.size();
+
+  std::vector<TH1*> UnMatchedHists;
+
+  //for (auto& Obs : ObsManager->GetObservables()) {
+  for (int iObs=0;iObs<ObsManager->GetNObservables();iObs++) {
+    TH1* Hist = ObsManager->GetObservable(iObs)->ReturnTemplateHistogram();
+    TH1* h = static_cast<TH1*>(Hist->Clone());
+
+    std::string HistName =
+      std::string(h->GetName()) + "_UnMatched";
+
+    h->SetName(HistName.c_str());
+
+    h->Reset();
+
+    UnMatchedHists.push_back(h);
+  }
+
+  for (const auto& [key, refObs] : ref->EventMap) {
+
+    auto it = test->EventMap.find(key);
+
+    if (it == test->EventMap.end()) {
+      continue;
+    }
+
+    const auto& testObs = it->second;
+
+    for (size_t i = 0; i < nObs; ++i) {
+
+      if (testObs[i] == -999 &&
+          refObs[i]  > -999) {
+
+        UnMatchedHists[i]->Fill(refObs[i]);
+      }
+    }
+  }
+
+  TCanvas* c = new TCanvas(
+    "UnMatched",
+    "UnMatched",
+    1200,
+    800
+  );
+
+
+  for (size_t i = 0; i < nObs; ++i) {
+
+    //UnMatchedHists[i]->SetStats(false);
+    UnMatchedHists[i]->SetLineWidth(2);
+
+    UnMatchedHists[i]->Draw("HIST");
+
+    /*TLatex latex;
+    latex.SetNDC();
+    latex.SetTextSize(0.04);
+    latex.SetTextFont(42);
+    latex.DrawLatex(0.25,0.85,"#bf{DUNE} Work in Progress");
+*/
+    if (nObs == 1) {
+      c->Print("UnMatched.pdf");
+    }
+    else if (i == 0) {
+      c->Print("UnMatched.pdf(");
+    }
+    else if (i == nObs - 1) {
+      c->Print("UnMatched.pdf)");
+    }
+    else {
+      c->Print("UnMatched.pdf");
+    }
+  }
+}
+
 
 template<typename T>
 T SampleManager<T>::CalculateCovariance(T XNominalBinContent, std::vector<T> XVariedBinContents, T YNominalBinContent, std::vector<T> YVariedBinContents) {
