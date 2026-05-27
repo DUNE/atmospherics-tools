@@ -569,9 +569,8 @@ void SampleManager<T>::PlotMatchedDifferences()
     const auto& testObs = it->second;
 
     for (size_t i = 0; i < nObs; ++i) {
-      if (refObs[i]!=0 && testObs[i]!=-9999 && refObs[i]!=-9999){
+      if (refObs[i]!=0 && testObs[i]>-999 && refObs[i]>-999){
         T diff = (testObs[i] - refObs[i])/refObs[i];
-
         DiffHists[i]->Fill(diff);
       }
     }
@@ -593,8 +592,8 @@ void SampleManager<T>::PlotMatchedDifferences()
   for (size_t i = 0; i < nObs; ++i) {
     DiffHists[i]->Draw();
 
-    if (i == 0) c->Print("MatchedDifferences.pdf(");
-    else if (i == nObs-1) c->Print("MatchedDifferences.pdf)");
+    if (nObs>1 && i == 0) c->Print("MatchedDifferences.pdf(");
+    else if (nObs>1 && i == nObs-1) c->Print("MatchedDifferences.pdf)");
     else c->Print("MatchedDifferences.pdf");
   }
 
