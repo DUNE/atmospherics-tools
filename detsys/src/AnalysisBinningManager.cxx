@@ -14,6 +14,8 @@ AnalysisBinningManager<T>::AnalysisBinningManager(YAML::Node Config_) {
     throw;
   }
 
+
+
   std::cout << "\nAnalysis Binning used for calculation of covariance/correlation matrices -" << std::endl;
   for (const auto& Selection : Config["AnalysisBinning"]) {
 

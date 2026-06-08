@@ -448,7 +448,7 @@ void SampleManager<T>::Plot1DWithRatio(TCanvas* Canv, std::vector<TH1*> Hists) {
     } else {
       Hists[iSamp]->Draw((DrawOptions_1D+" SAME").c_str());
     }
-    Legends[iSamp] = new TLegend(0.8,0.9-(1.0+static_cast<T>(iSamp))*LegendHeight,0.99,0.9-static_cast<T>(iSamp)*LegendHeight);
+    Legends[iSamp] = new TLegend(0.7,0.9-(1.0+static_cast<T>(iSamp))*LegendHeight,0.99,0.9-static_cast<T>(iSamp)*LegendHeight);
     Legends[iSamp]->SetTextSize(FontSize);
     Legends[iSamp]->AddEntry(Hists[iSamp],(Samples[iSamp]->GetName()).c_str(),"l");
     Legends[iSamp]->Draw();
@@ -463,7 +463,7 @@ void SampleManager<T>::Plot1DWithRatio(TCanvas* Canv, std::vector<TH1*> Hists) {
   pad2->cd();
 
   std::vector<TH1*> RatioHists(Hists.size());
-
+  
   for (size_t iSamp=0;iSamp<Hists.size();iSamp++) {
 
     RatioHists[iSamp] =
@@ -493,6 +493,9 @@ void SampleManager<T>::Plot1DWithRatio(TCanvas* Canv, std::vector<TH1*> Hists) {
 
     RatioHists[iSamp]->GetYaxis()->SetNdivisions(505);
 
+  }
+  for (size_t iSamp=0;iSamp<Hists.size();iSamp++) {
+    //RatioHists[iSamp]->GetYaxis()->SetRangeUser(min-0.02,max+0.02);
     RatioHists[iSamp]->GetYaxis()->SetRangeUser(0.9,1.1);
     RatioHists[iSamp]->GetYaxis()->SetTitleOffset(0.6);
     /*if (static_cast<int>(iSamp) == IndexToRatioTo) {
@@ -572,7 +575,13 @@ void SampleManager<T>::PlotMatchedDifferences()
       if (refObs[i]!=0 && testObs[i]>-999 && refObs[i]>-999){
         T diff = (testObs[i] - refObs[i])/refObs[i];
         DiffHists[i]->Fill(diff);
+        //if (diff < -0.95) std::cout<<"Relative diff<-0.95 with detvar at "<<refObs[i]<<" and wiremod at "<<testObs[i]<<" for run "<<key.run<<"event "<<key.event<<std::endl;
       }
+      /*else{
+        if (refObs[i]==0 || testObs[i]==0) std::cout<<"Detvar at "<<refObs[i]<<" and wiremod at "<<testObs[i]<<" for run "<<key.run<<" event "<<key.event<<std::endl;
+        //if (testObs[i]==-999) std::cout<<"Wiremod invalid reco for run: "<<key.run<<" event "<<key.event<<std::endl;
+        //if (refObs[i]==-999) std::cout<<"Detvar invalid reco for run: "<<key.run<<" event "<<key.event<<std::endl;
+      }*/
     }
     nMatched++;
   }
@@ -646,11 +655,17 @@ void SampleManager<T>::PlotUnMatched()
 
     for (size_t i = 0; i < nObs; ++i) {
 
-      if (testObs[i] == -999 &&
+      /*if (testObs[i] == -999 &&
           refObs[i]  > -999) {
-
+        //std::cout<<"detector variation value: "<<refObs[i]<<std::endl;
         UnMatchedHists[i]->Fill(refObs[i]);
+      }*/
+      T diff = (testObs[i] - refObs[i]);
+      if (refObs[i]>0){
+        diff = (testObs[i] - refObs[i])/refObs[i];
       }
+      else if (refObs[i]<0) diff = 0; 
+      if (std::abs(diff)>0.95) UnMatchedHists[i]->Fill(refObs[i]);
     }
   }
 
@@ -734,6 +749,9 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   OutputRootName = Config["OutputRootName"].as<std::string>();
   DrawOptions_1D = Config["DrawOpts"].as<std::string>();
   std::string NominalSample = Config["NominalSample"].as<std::string>();
+  
+  std::string parameterName = Config["parameter"]["name"].as<std::string>();
+  T parameterCentralValue =  Config["parameter"]["central_value"].as<float>();
   SampleNameToRatioTo = NominalSample;
   int plotRatiosSameCanvas = 0;
   if (Config["RatioSameCanvas"]){
@@ -822,6 +840,8 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   int nBins = AnalysisBinning->GetNBins();
   TH2* CovarianceMatrix;
   TH2* CorrelationMatrix;
+  TMatrixT<T> CovMatrix(nBins, nBins);
+  TMatrixT<T> CorrMatrix(nBins, nBins);
   TH1* CovarianceMatrixDiag;
   if (typeid(T) == typeid(float)) {
     CovarianceMatrix = new TH2F("AnalysisBinningCovMat","Covariance Matrix;Analysis Binning;Analysis Binning",nBins,0,nBins,nBins,0,nBins);
@@ -859,6 +879,7 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
       T CovarianceErr = CalculateCovarianceErr(XNominalBinContent,XNominalBinError,XVariedBinContents,XVariedBinErrors,YNominalBinContent,YNominalBinError,YVariedBinContents,YVariedBinErrors);
       CovarianceMatrix->SetBinContent(xBin+1,yBin+1,Covariance);
       CovarianceMatrix->SetBinError(xBin+1,yBin+1,CovarianceErr);
+      CovMatrix(xBin, yBin) = Covariance;
     }
   }
   CovarianceMatrix->SetStats(false);
@@ -867,8 +888,12 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   latex.SetTextSize(0.04);        // adjust size
   latex.SetTextFont(42);          // nice standard font
   Canv->SetGridx(false);
+  gPad->SetRightMargin(0.2);
   CovarianceMatrix->GetXaxis()->CenterTitle();
   CovarianceMatrix->GetYaxis()->CenterTitle();
+  CovarianceMatrix->GetZaxis()->SetTitle("Relative Covariance");
+  CovarianceMatrix->GetZaxis()->SetTitleOffset(1.4);
+  CovarianceMatrix->GetZaxis()->CenterTitle();
   if (BinLabels.size()!=0){
     for (size_t iBin = 0; iBin < BinLabels.size(); iBin++){
       CovarianceMatrix->GetXaxis()->SetBinLabel(iBin+1, BinLabels[iBin].c_str());
@@ -884,7 +909,10 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   latex.DrawLatex(0.25, 0.85, "#bf{DUNE} Work in Progress");
 
   TFile *output_root_file = new TFile(OutputRootName.c_str(), "RECREATE");
-  CovarianceMatrix->Write("covariance");
+  CovMatrix.Write("covariance");
+  output_root_file->WriteObject(&BinLabels, "BinLabels");
+  output_root_file->WriteObject(&parameterName, "parameterName");
+  output_root_file->WriteObject(&parameterCentralValue, "parameterNominalValue");
 
   Canv->Print(OutputFileName_1D.c_str());
   Canv->SetGridx();
@@ -917,8 +945,10 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
     for (int yBin=0;yBin<nBins;yBin++) {
       if (CovarianceMatrixDiag->GetBinContent(xBin+1) > 0 && CovarianceMatrixDiag->GetBinContent(yBin+1) > 0) {
 	CorrelationMatrix->SetBinContent(xBin+1,yBin+1,CovarianceMatrix->GetBinContent(xBin+1,yBin+1)/(CovarianceMatrixDiag->GetBinContent(xBin+1)*CovarianceMatrixDiag->GetBinContent(yBin+1)));
+        CorrMatrix(xBin, yBin) = CovarianceMatrix->GetBinContent(xBin+1,yBin+1)/(CovarianceMatrixDiag->GetBinContent(xBin+1)*CovarianceMatrixDiag->GetBinContent(yBin+1));
       } else {
 	CorrelationMatrix->SetBinContent(xBin+1,yBin+1,0.);
+        CorrMatrix(xBin, yBin) = 0;
       }
     }
   }
@@ -939,7 +969,7 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   CorrelationMatrix->GetYaxis()->CenterTitle();
   CorrelationMatrix->Draw("COLZ");
   latex.DrawLatex(0.25, 0.85, "#bf{DUNE} Work in Progress");
-  CorrelationMatrix->Write("correlation");
+  CorrMatrix.Write("correlation");
   output_root_file->Close();
 
   Canv->Print(OutputFileName_1D.c_str());

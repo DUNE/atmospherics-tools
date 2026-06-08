@@ -58,6 +58,7 @@ class Sample {
   std::string GetName() {return Name;}
   TH1* GetMeasurement(int iMeas);
   TH1* GetAnalysisBinningHistogram() {return AnalysisBinningHistogram;}
+  AnalysisBinningManager<T>* GetAnalysisBinning() {return AnalysisBinning;}
   std::map<EventKey, std::vector<T>> EventMap;
   void SetFluxManager(FluxManager* FlxMgr_) {
     FlxMgr = FlxMgr_;
