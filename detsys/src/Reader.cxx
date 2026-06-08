@@ -283,7 +283,6 @@ void Reader<T>::UpdateData(){
     _data.Selection = Unsel;
     _data.cvn_numu = _BAD_VALUE_;
     _data.cvn_nue = _BAD_VALUE_;
-    _data.trueInt = Truth::Other;
     //std::cout<<"unselected because of pandora size: "<<_sr->common.ixn.pandora.size()<<std::endl;
     return;
   }
@@ -318,6 +317,7 @@ void Reader<T>::UpdateData(){
   if (_data.Selection == Sel::SelNC) {
     _data.had_erec = _sr->common.ixn.pandora[0].Enu.calo;
     _data.erec = _sr->common.ixn.pandora[0].Enu.calo;
+    _data.lep_erec = 0;
     _data.RecoCZ = -_sr->common.ixn.pandora[0].dir.heshw.y;
   } else if (_data.Selection == Sel::SelNuMu) {
     _data.erec = _sr->common.ixn.pandora[0].Enu.lep_calo;
