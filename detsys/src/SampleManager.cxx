@@ -2,7 +2,7 @@
 #include "TLatex.h"
 #include "TLegend.h"
 #include "TLine.h"
-
+#include "TVectorT.h"
 
 
 template<typename T>
@@ -749,9 +749,15 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   OutputRootName = Config["OutputRootName"].as<std::string>();
   DrawOptions_1D = Config["DrawOpts"].as<std::string>();
   std::string NominalSample = Config["NominalSample"].as<std::string>();
-  
+  std::string LArReco = Config["LArReco"].as<std::string>();
+  std::string LArCafMaker = Config["LArCafMaker"].as<std::string>();
+  std::string CAfToolCommit = Config["CAfToolCommit"].as<std::string>(); 
   std::string parameterName = Config["parameter"]["name"].as<std::string>();
-  T parameterCentralValue =  Config["parameter"]["central_value"].as<float>();
+  TVectorT<double> parameterCentralValue(1);
+  parameterCentralValue[0] =  Config["parameter"]["central_value"].as<double>();
+  TVectorT<double> parameterPrior(1); 
+  parameterPrior[0] =  Config["parameter"]["prior"].as<double>();
+
   SampleNameToRatioTo = NominalSample;
   int plotRatiosSameCanvas = 0;
   if (Config["RatioSameCanvas"]){
@@ -843,6 +849,11 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   TMatrixT<T> CovMatrix(nBins, nBins);
   TMatrixT<T> CorrMatrix(nBins, nBins);
   TH1* CovarianceMatrixDiag;
+
+  TVectorT<double> Priors(nBins);
+  TVectorT<double> LowerBounds(nBins);
+  TVectorT<double> UpperBounds(nBins);
+
   if (typeid(T) == typeid(float)) {
     CovarianceMatrix = new TH2F("AnalysisBinningCovMat","Covariance Matrix;Analysis Binning;Analysis Binning",nBins,0,nBins,nBins,0,nBins);
     CorrelationMatrix = new TH2F("AnalysisBinningCorrMat","Correlation Matrix;Analysis Binning;Analysis Binning",nBins,0,nBins,nBins,0,nBins);
@@ -854,6 +865,9 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   }
 
   for (int xBin=0;xBin<nBins;xBin++) {
+    Priors[xBin]=1;
+    LowerBounds[xBin]=0;
+    UpperBounds[xBin]=50;
     T XNominalBinContent = Samples[NominalIndex]->GetAnalysisBinningHistogram()->GetBinContent(xBin+1);
     T XNominalBinError = Samples[NominalIndex]->GetAnalysisBinningHistogram()->GetBinError(xBin+1);
     std::vector<T> XVariedBinContents;
@@ -909,10 +923,19 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   latex.DrawLatex(0.25, 0.85, "#bf{DUNE} Work in Progress");
 
   TFile *output_root_file = new TFile(OutputRootName.c_str(), "RECREATE");
+  
+
+  output_root_file->WriteObject(&LArReco, "LArsoft_reco_tag");
+  output_root_file->WriteObject(&LArCafMaker, "LArsoft_cafmaker_tag");
+  output_root_file->WriteObject(&CAfToolCommit, "CAFcomparisonTool_commit");
+  output_root_file->WriteObject(&BinLabels, "param_names");
+  output_root_file->WriteObject(&parameterName, "detector_paremeter_name");
+  parameterCentralValue.Write("detector_parameter_central_value");
+  parameterPrior.Write("detector_parameter_1sigma");
+  Priors.Write("param_prior");
+  LowerBounds.Write("param_lb");
+  UpperBounds.Write("param_ub");
   CovMatrix.Write("covariance");
-  output_root_file->WriteObject(&BinLabels, "BinLabels");
-  output_root_file->WriteObject(&parameterName, "parameterName");
-  output_root_file->WriteObject(&parameterCentralValue, "parameterNominalValue");
 
   Canv->Print(OutputFileName_1D.c_str());
   Canv->SetGridx();
