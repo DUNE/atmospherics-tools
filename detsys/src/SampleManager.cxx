@@ -3,7 +3,7 @@
 #include "TLegend.h"
 #include "TLine.h"
 #include "TVectorT.h"
-
+#include "TString.h"
 
 template<typename T>
 Sample<T>::Sample(YAML::Node SampleConfig) {
@@ -748,11 +748,11 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   OutputFileName_1D = Config["OutputName"].as<std::string>();
   OutputRootName = Config["OutputRootName"].as<std::string>();
   DrawOptions_1D = Config["DrawOpts"].as<std::string>();
-  std::string NominalSample = Config["NominalSample"].as<std::string>();
-  std::string LArReco = Config["LArReco"].as<std::string>();
-  std::string LArCafMaker = Config["LArCafMaker"].as<std::string>();
-  std::string CAfToolCommit = Config["CAfToolCommit"].as<std::string>(); 
-  std::string parameterName = Config["parameter"]["name"].as<std::string>();
+  TString NominalSample(Config["NominalSample"].as<std::string>().c_str());
+  TString LArReco(Config["LArReco"].as<std::string>().c_str());
+  TString LArCafMaker(Config["LArCafMaker"].as<std::string>().c_str());
+  TString CAfToolCommit(Config["CAfToolCommit"].as<std::string>().c_str()); 
+  TString parameterName(Config["parameter"]["name"].as<std::string>().c_str());
   TVectorT<double> parameterCentralValue(1);
   parameterCentralValue[0] =  Config["parameter"]["central_value"].as<double>();
   TVectorT<double> parameterPrior(1); 
