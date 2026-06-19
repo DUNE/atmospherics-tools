@@ -116,7 +116,10 @@ int main(int argc, char const *argv[]) {
 
   // CAF tree
   TTree *t_input_caftree(nullptr);
-  f_input->GetObject("cafTree", t_input_caftree);
+  f_input->GetObject("cafmaker/cafTree", t_input_caftree);
+  if (!t_input_caftree) {
+    f_input->GetObject("cafTree", t_input_caftree);
+  }
 
   if(!t_input_caftree){
     std::cerr << "Could not find input tree cafTree" << std::endl;
@@ -131,7 +134,10 @@ int main(int argc, char const *argv[]) {
 
   // GENIE tree
   TTree *t_input_genie(nullptr);
-  f_input->GetObject("genieEvt", t_input_genie);
+  f_input->GetObject("cafmaker/genieEvt", t_input_genie);
+  if (!t_input_genie) {
+    f_input->GetObject("genieEvt", t_input_genie);
+  }
 
   if(!t_input_genie){
     std::cerr << "Could not find input tree cafmaker/genieEvt" << std::endl;
@@ -192,19 +198,22 @@ int main(int argc, char const *argv[]) {
     srglobal.wgts.params.back().name = hdr.prettyName;
     // TODO better save paramVariations
     if (hdr.isCorrection) {
-      srglobal.wgts.params.back().nshifts = 1;
+      srglobal.wgts.params.back().vals.push_back(1.0);
     } else {
-      srglobal.wgts.params.back().nshifts = hdr.paramVariations.size();
+      for (double val : hdr.paramVariations) {
+        srglobal.wgts.params.back().vals.push_back(val);
+      }
     }
     // ParamID
     srglobal.wgts.params.back().id = pid;
-    sys_weights[pid] = new Double_t[srglobal.wgts.params.back().nshifts];
-    std::fill_n(sys_weights[pid], srglobal.wgts.params.back().nshifts, 1.0);
-    syst_weights_tree->Branch(hdr.prettyName.c_str(), sys_weights[pid], Form("%s[%d]/D", hdr.prettyName.c_str(), srglobal.wgts.params.back().nshifts));
+    int nshifts = srglobal.wgts.params.back().vals.size();
+    sys_weights[pid] = new Double_t[nshifts];
+    std::fill_n(sys_weights[pid], nshifts, 1.0);
+    syst_weights_tree->Branch(hdr.prettyName.c_str(), sys_weights[pid], Form("%s[%d]/D", hdr.prettyName.c_str(), nshifts));
   }
   printf("@@ Printing SRGlobal\n");
   for(const auto& sp:srglobal.wgts.params){
-    printf("- (id, name, nshifts) = (%d, %s, %d)\n", sp.id, sp.name.c_str(), sp.nshifts);
+    printf("- (id, name, nshifts) = (%d, %s, %ld)\n", sp.id, sp.name.c_str(), sp.vals.size());
   }
 
 
@@ -271,6 +280,7 @@ int main(int argc, char const *argv[]) {
       systtools::event_unit_response_w_cv_t resp = resp_helper.GetEventVariationAndCVResponse(CopyGenieEventRecord);
 
       delete GenieNtpl->event;
+      GenieNtpl->event = nullptr;
 
       for(const auto& v: resp){
         const systtools::paramId_t& pid = v.pid;
@@ -324,6 +334,7 @@ int main(int argc, char const *argv[]) {
     t_input_genie->GetEntry(i);
     t_output_genie->Fill();
     delete GenieNtpl->event;
+    GenieNtpl->event = nullptr;
   }
   t_output_genie->Write("genieEvt");
 

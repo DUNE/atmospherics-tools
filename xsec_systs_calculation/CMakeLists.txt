@@ -25,8 +25,7 @@ endif()
 
 FetchContent_Declare(
 	nusystematics
-	GIT_REPOSITORY https://github.com/NuSystematics/nusystematics
-	GIT_TAG 0cd128b2a83146dbf802e9b1688f643f0936a040
+	SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_deps/nusystematics-src
 )
 FetchContent_MakeAvailable(nusystematics)
 

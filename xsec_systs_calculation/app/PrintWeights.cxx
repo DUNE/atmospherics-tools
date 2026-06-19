@@ -162,16 +162,18 @@ int main(int argc, char const *argv[]) {
     srglobal.wgts.params.back().name = hdr.prettyName;
     // TODO better save paramVariations
     if (hdr.isCorrection) {
-      srglobal.wgts.params.back().nshifts = 1;
+      srglobal.wgts.params.back().vals.push_back(1.0);
     } else {
-      srglobal.wgts.params.back().nshifts = hdr.paramVariations.size();
+      for (double val : hdr.paramVariations) {
+        srglobal.wgts.params.back().vals.push_back(val);
+      }
     }
     // ParamID
     srglobal.wgts.params.back().id = pid;
   }
   printf("@@ Printing SRGlobal\n");
   for(const auto& sp:srglobal.wgts.params){
-    printf("- (id, name, nshifts) = (%d, %s, %d)\n", sp.id, sp.name.c_str(), sp.nshifts);
+    printf("- (id, name, nshifts) = (%d, %s, %ld)\n", sp.id, sp.name.c_str(), sp.vals.size());
   }
 
   // Loop over CAFTree
