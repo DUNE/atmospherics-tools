@@ -293,8 +293,15 @@ int main(int argc, char const *argv[]) {
         size_t nPoints = ws.size();
 
         if (nPoints != hdr.paramVariations.size()) {
-	  std::cout << "nPoints:" << nPoints << std::endl;
-	  std::cout << "hdr.paramVariations.size():" << hdr.paramVariations.size() << std::endl;
+	  std::cout << "Mismatch for parameter: " << hdr.prettyName << " (pid: " << pid << ")" << std::endl;
+	  std::cout << "nPoints: " << nPoints << std::endl;
+	  std::cout << "hdr.paramVariations.size(): " << hdr.paramVariations.size() << std::endl;
+	  std::cout << "hdr.paramVariations: [";
+	  for (double val : hdr.paramVariations) std::cout << val << ", ";
+	  std::cout << "]" << std::endl;
+	  std::cout << "ws (responses): [";
+	  for (double w : ws) std::cout << w << ", ";
+	  std::cout << "]" << std::endl;
           throw;
         }
         for (int iP=0;iP<nPoints;iP++) {
