@@ -12,3 +12,8 @@ setup genie_xsec v3_06_00 -q AR2320i00000:e1000:k250
 
 ## CAFs
 setup duneanaobj v03_15_00 -q e26:prof
+setup sqlite v3_40_01_00
+
+## SBN data
+export PRODUCTS=$PRODUCTS:/cvmfs/sbn.opensciencegrid.org/products/sbn
+setup sbndata v01_10

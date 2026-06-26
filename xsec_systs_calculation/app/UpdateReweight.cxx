@@ -195,7 +195,8 @@ int main(int argc, char const *argv[]) {
 
     srglobal.wgts.params.emplace_back();
     // Name
-    srglobal.wgts.params.back().name = hdr.prettyName;
+    std::string unique_name = resp_helper.GetHeaders().at(pid).ProviderFQName + "_" + hdr.prettyName;
+    srglobal.wgts.params.back().name = unique_name;
     // TODO better save paramVariations
     if (hdr.isCorrection) {
       srglobal.wgts.params.back().vals.push_back(1.0);
@@ -209,7 +210,7 @@ int main(int argc, char const *argv[]) {
     int nshifts = srglobal.wgts.params.back().vals.size();
     sys_weights[pid] = new Double_t[nshifts];
     std::fill_n(sys_weights[pid], nshifts, 1.0);
-    syst_weights_tree->Branch(hdr.prettyName.c_str(), sys_weights[pid], Form("%s[%d]/D", hdr.prettyName.c_str(), nshifts));
+    syst_weights_tree->Branch(unique_name.c_str(), sys_weights[pid], Form("%s[%d]/D", unique_name.c_str(), nshifts));
   }
   printf("@@ Printing SRGlobal\n");
   for(const auto& sp:srglobal.wgts.params){

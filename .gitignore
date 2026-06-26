@@ -2,3 +2,10 @@
 **/.history
 **/.vscode
 **/__pycache__
+
+# Grid job credentials and transient artifacts (never commit)
+**/jobscript-proxy.pem
+**/*.tgz
+**/*.tar.gz
+**/job.sh*cluster*
+**/build_*.log

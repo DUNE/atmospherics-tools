@@ -25,7 +25,8 @@ endif()
 
 FetchContent_Declare(
 	nusystematics
-	SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_deps/nusystematics-src
+	GIT_REPOSITORY https://github.com/pgranger23/nusystematics.git
+	GIT_TAG dune_atmospherics_fix_inf
 )
 FetchContent_MakeAvailable(nusystematics)
 
@@ -47,6 +48,11 @@ find_package(GENIE3 REQUIRED)
 if(NOT TARGET GENIE3::All)
   message(FATAL_ERROR "Expected find_package(GENIE3 REQUIRED) call to set up target GENIE3::All.")
 endif()
+get_target_property(genie_includes GENIE3::All INTERFACE_INCLUDE_DIRECTORIES)
+message("DEBUG: GENIE3::All INTERFACE_INCLUDE_DIRECTORIES: ${genie_includes}")
+get_target_property(genie_link_dirs GENIE3::All INTERFACE_LINK_DIRECTORIES)
+message("DEBUG: GENIE3::All INTERFACE_LINK_DIRECTORIES: ${genie_link_dirs}")
+
 
 ###### Compiler set up
 add_library(ndnusyst_dependencies INTERFACE)

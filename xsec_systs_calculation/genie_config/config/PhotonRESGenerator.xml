@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<alg_conf>
+
+<!--
+Configuration sets for PhotonRESGenerator EventRecordVisitorI
+-->
+
+  <param_set name="Default"> 
+     <param type="string" name="CommonDecay">                       DecayFlags </param>
+     <param type="string" name="CommonParam">            HEDIS-SF,HEDIS-PYTHIA </param>
+   <param type="alg"      name="WDecayer">  genie::PhotonRESWdecPythia6/Default </param>
+  </param_set>
+
+</alg_conf>
+

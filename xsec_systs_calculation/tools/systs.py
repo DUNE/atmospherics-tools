@@ -1,3 +1,4 @@
+from __future__ import annotations
 import awkward as ak
 import pandas as pd
 import polars as pl
