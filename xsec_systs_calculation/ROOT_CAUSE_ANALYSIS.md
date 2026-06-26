@@ -143,3 +143,32 @@ params returned in each event's `resp` (lines 308–310) — never reset per eve
 here because `GetEventVariationAndCVResponse` returns every configured param each event, but if
 any provider ever returned a partial list, weights would go stale from the previous event.
 Also `genieIdx = cafev_it` (line 265) assumes CAF↔genie row alignment (true for this file).
+
+## Issue 4 — DecayAngMECVariationResponse stayed 1.0 (now fixed)
+The MEC nucleon-cluster decay-angle systematic is delivered through the **response** parameter
+`DecayAngMECVariationResponse`, whose 25 universes index the joint grid of its dependent
+*responseless* dials `DecayAngMEC` (amplitude) and `DecayAng2MEC` (frequency). Two bugs kept it at
+1.0:
+1. **No wiring (nusystematics).** `ConfigureMECWeightEngine` only called `AddIndependentParameters`
+   and never `AddResponseAndDependentDials` for any MEC response — every other channel (QE/RES/NCEL/
+   COH/DIS/FSI) wires its `*VariationResponse`, but MEC did not. So the response was declared (header
+   id) but never connected to a GReWeight engine. Also `DecayAngMEC` was (incorrectly) in the
+   independent list, giving it only the standalone amplitude term.
+   → **Fix:** add `AddResponseAndDependentDials(MECmd, "DecayAngMECVariationResponse",
+   {kXSecTwkDial_DecayAngMEC, kXSecTwkDial_DecayAng2MEC}, "xsec_mec", ...)` and drop `DecayAngMEC`
+   from the independent list (`nusystematics_DecayAng_response.patch`).
+   Pushed to `pgranger23/nusystematics @ dune_atmospherics_fix_inf`.
+2. **0/0 singularity (Reweight).** Wiring the response exposed a latent NaN in
+   `GReWeightXSecMEC::CalcWeightAngularDist`: the normalization has a `(1 - 4*twk_dial2^2)`
+   denominator that vanishes at `twk_dial2 = ±0.5` (a value in the frequency grid) → NaN. The limit
+   of the singular term is 0.
+   → **Fix:** guard the denominator and substitute the limit
+   (`Reweight_DecayAng_nan_guard.patch`). Pushed to `pgranger23/Reweight @ dune_atmospherics_fix_inf`
+   (forked from larsb-p/Reweight; the local Reweight origin was repointed to the fork, and the
+   guarded `libGRwClc` installed into `local_install/lib`).
+
+**Validated:** `DecayAngMECVariationResponse` now varies (no NaN/inf); `DecayAngMEC`/`DecayAng2MEC`
+standalone branches correctly go to 1.0 (responseless). Note: at negative amplitude (`DecayAngMEC` =
+−0.5/−1) the angular model dips negative (~−2) — an inherent property of the linear isotropic↔cos²
+interpolation extrapolated to negative amplitude; these are clipped to 0 by the analysis tooling
+(`systs.py` `clip(lower_bound=0)`).

@@ -1,0 +1,19 @@
+diff --git a/src/RwCalculators/GReWeightXSecMEC.cxx b/src/RwCalculators/GReWeightXSecMEC.cxx
+index 79dbe788..467d2306 100644
+--- a/src/RwCalculators/GReWeightXSecMEC.cxx
++++ b/src/RwCalculators/GReWeightXSecMEC.cxx
+@@ -534,7 +534,13 @@ double GReWeightXSecMEC::CalcWeightAngularDist(const genie::EventRecord& event)
+   // function.
+   // To preserve norm, the weight will be divided by integral of the reweighting over
+   // a flat costheta distribution
+-  double norm =  1.0 - twk_dial + 3.0 * twk_dial * ( 0.5 + (1.0 + std::cos(2.0 * M_PI * twk_dial2)) / (4.0 * (1.0 - 4.0 * twk_dial2 * twk_dial2)) );
++  // Guard the removable 0/0 singularity at twk_dial2 = +/-0.5 (where 1 - 4*twk_dial2^2 = 0):
++  // the limit of (1 + cos(2*pi*f)) / (4*(1 - 4*f^2)) as f -> +/-0.5 is 0.
++  double denom = 4.0 * (1.0 - 4.0 * twk_dial2 * twk_dial2);
++  double sing_term = ( std::abs(denom) < 1e-9 )
++                       ? 0.0
++                       : (1.0 + std::cos(2.0 * M_PI * twk_dial2)) / denom;
++  double norm =  1.0 - twk_dial + 3.0 * twk_dial * ( 0.5 + sing_term );
+ 
+   double weight;
+ 
