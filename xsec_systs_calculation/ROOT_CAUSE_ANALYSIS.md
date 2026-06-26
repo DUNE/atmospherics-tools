@@ -64,8 +64,24 @@ per-event `diff_xsec_def`/`diff_xsec_alt`.
 
 Note these dials are **redundant** with the working `MECq0q3InterpWeighting` SuSA→Martini/Valencia
 dials (precomputed weight tables from `sbndata` — those already produce real MEC-model variation).
-→ **Options:** (a) keep the data fix and debug `GReWeightXSecMEC.cxx`; or (b) keep the data fix
-(removes the FATAL spam) but drop the `_Martini`/`_Empirical` dials from the fcl as redundant.
+
+**Debugging the second bug (done; narrowed, not yet fixed):** ruled out the dial→`GSyst` mapping
+(correct, `GSyst.cxx:128-130`), data availability (fixed), and lib/source mismatch (the runtime
+`libGRwClc` is compiled from the current `.cxx`; the couts are in it). A `ReW`=DEBUG run shows the
+morph functions' `std::cout`/`pDEBUG` lines (`CalcWeightXSecShape{,_Empirical,_Martini}`,
+`GReWeightXSecMEC.cxx` ~1041/1227/1407) **never execute**, while other providers' couts do — so the
+morph code returns early at the `if(!tweaked) return 1.` guard (twk dial ≈ 0). I.e. the
+`_Martini`/`_Empirical` tweak isn't reaching `GReWeightXSecMEC`, even though the generic
+`XSecShape_CCMEC` weight IS produced. Telling asymmetry: of each sibling pair, one works and one
+doesn't (`XSecShape_CCMEC` ✓ vs `_Martini`/`_Empirical` ✗; `FracPN_CCMEC` ✓ vs `FracDelta_CCMEC` ✗)
+— pointing to a per-dial gap in how the provider/`SetSystematic` propagates the tweak for these
+specific enums. **Next step (needs a Reweight rebuild):** add `std::cerr` of
+`fCCXSecShapeMartiniTwkDial` + `type` at the top of `CalcWeightXSecShape_Martini`, rebuild
+`libGRwClc`, rerun `-N 200`; twk==0 ⇒ propagation bug in the nusystematics→GReWeight layer, twk==1
+⇒ the morph gate/math.
+
+→ **Status:** data fix kept (removes the FATAL, prerequisite). The morph dials remain inert pending
+the rebuild above; they are redundant with the working `MECq0q3Interp` dials in the meantime.
 
 ### 1c. Expected / benign (not bugs)
 - `CCQEXSecCorr`, `Theta_Delta2Npi`, `VecFFCCQEshape`: corrections — `UpdateReweight.cxx:289`
