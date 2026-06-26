@@ -3,47 +3,69 @@
 Investigation of the variation-production setup (`UpdateReweight.cxx`,
 `fcl/systs_atmospherics_v2.fcl`, `genie_config/config/*`, job `.out` logs) explaining the
 three issues seen in the wsbn output (`merged_new_systs_wsbn_wheader.root`). Generation tune:
-**AR23_20i_00_000**; reweighting GENIE: **v3_06_02e** (standard larsoft) per `setup.sh`.
+**AR23_20i_00_000** (FSI = `genie::HAIntranuke2018/Default`, i.e. hA2018). The reweighting links
+a **custom local GENIE build** (`/exp/dune/app/users/pgranger/systematics-lars/{Generator,Reweight,
+local_install}`), NOT the ups `v3_06_02e` (that only provides base deps + data). This matters: the
+fixes are about the custom build / its data, not the ups version.
 
 ## Issue 1 — 27 dials are identically unit. Three distinct causes:
 
-### 1a. The 16 SBN FSI dials — wrong GENIE build (need the SBN fork)
+### 1a. The 16 SBN FSI dials — no GReWeight calculator in this build, and N/A for hA2018
 `FrG4{,LoE,M1E,M2E,HiE}_N`, `FrINCL{,LoE,M1E,M2E,HiE}_N`, `MFP{Lo,M1,M2,Hi}E_N`,
-`FrKin_PiPro{Fix,Bias}_N` (the `GENIEReWeight ... SBN_v3` provider) are **SBN-specific
-extensions** — Geant4/INCL-cascade and energy-binned MFP / kinematic FSI dials. They are
-implemented in the **SBN GENIE fork (`v3_06_02_sbn1/sbn2`)**, but `setup.sh` sets up
-**standard `genie v3_06_02e`**, which doesn't implement them → GReWeight returns 1.0.
+`FrKin_PiPro{Fix,Bias}_N` (the `GENIEReWeight ... SBN_v3` provider) are Geant4/INCL-cascade and
+energy-binned MFP / kinematic FSI dials. The custom GReWeight build only implements the **standard
+hA INuke dials** — `grep` of `Reweight/src/RwCalculators/GReWeightINuke*` gives exactly
+`kINukeTwkDial_{FrAbs,FrCEx,FrElas,FrInel,FrPiProd,MFP}_{N,pi}` and **nothing** for
+`FrG4/FrINCL/MFP*E/FrKin`. Consistently, `GSystUncertaintyTable.xml` has 1σ entries only for those
+standard dials (the ones that **do** vary in the output). On top of that the sample's FSI is
+**hA2018** (`AR23_20i/ModelConfiguration.xml: HadronTransp-Model = genie::HAIntranuke2018/Default`),
+for which Geant4/INCL-cascade reweighting is not even defined. So these 16 dials cannot produce
+weights here under any config.
+→ **Fix (recommended):** remove the `GENIEReWeight ... SBN_v3` provider from the fcl. The hA FSI
+uncertainties are already covered by the working `ICARUS_v2` `FrAbs/FrCEx/FrInel/FrPiProd/MFP`
+dials. (Getting genuine G4/INCL-cascade FSI dials would require an SBN-fork GReWeight build **and**
+regenerating the sample with a cascade FSI model — a separate, major effort, not warranted.)
 
-Evidence: `genie_config/config/GSystUncertaintyTable.xml` has 1σ entries **only** for the
-standard hA dials (`FrAbs/FrCEx/FrInel/FrPiProd/MFP` for π and N) — exactly the dials that
-**do** vary in the output — and **none** for `FrG4/FrINCL/MFP*E/FrKin`. The fcl was clearly
-ported from an SBN config (the CCQE block even references
-`reweight_data_..._v3_06_02_sbn2_...`), but the build links the non-SBN GENIE.
-→ **Fix:** build/run nusystematics against `genie v3_06_02_sbn2` (+ matching `genie_xsec`),
-or remove these dials from the fcl for a v3_06_02e production.
-
-### 1b. The MEC model-morph dials — alternative MEC model fails to configure
+### 1b. The MEC model-morph dials — Martini/Empirical hadron-tensor DATA is missing at runtime
 `XSecShape_CCMEC_Martini`, `XSecShape_CCMEC_Empirical`, `EnergyDependence_CCMEC`,
 `FracDelta_CCMEC`, `DecayAng2MEC`, `DecayAngMECVariationResponse` need a *live alternative MEC
-cross-section model* to reweight to. The job log shows it failing:
+cross-section model*. The job log shows it failing:
 ```
 FATAL  ... Key: HadronTensorAlg does not exist in pools from algorithm :
        genie::MartiniEricsonChanfrayMarteauMECPXSec2024/Default
-WARN   ... No Configuration available for genie::MartiniEricsonChanfrayMarteauMECPXSec2024/Default
+WARN   ... No Configuration available for ...MartiniEricsonChanfrayMarteauMECPXSec2024/Default
 ```
-Root cause: **`genie_config/config/reweight_master_config.xml` is incomplete** — it registers
-only 3 algorithms:
-```
-genie::rew::ObservableMuonMomentum, genie::rew::ObservablePMuEnu, genie::rew::GSystUncertaintyTable
-```
-It omits the Martini/Empirical MEC PXSec and their hadron-tensor models. So during reweighting
-the Martini MEC PXSec can't resolve its `HadronTensorAlg` (`genie::MartiniMECHadronTensorModel/
-Default`) from the reweight ConfigPool, the model can't be built, and the dial silently → 1.0.
-(The full `master_config.xml` *does* register these algorithms; the reweight pool doesn't pull
-them in.) The "shape/fraction" MEC dials that don't need a model swap (`XSecShape_CCMEC`,
-`FracPN_CCMEC`, `DecayAngMEC`) work fine.
-→ **Fix:** add the MEC-model + hadron-tensor `<config>` lines (Martini*, EmpiricalMEC*,
-SuSAv2MEC*, Nieves*) from `master_config.xml` into `reweight_master_config.xml`.
+Root cause is a **data-path bug, not a config-registration one.** The configs are fine —
+`master_config.xml` *does* register Martini/Empirical (lines 227/230/272/273), the model XMLs have
+proper `Default` param_sets, and `reweight_master_config.xml` is additively loaded
+(`AlgConfigPool.cxx:210-212`). But `MartiniMECHadronTensorModel.xml` loads tensors from
+`DataPath: data/evgen/hadron_tensors/martini` *relative to `$GENIE`*, and `job.sh:46` does
+`ln -s ${ORIG_GENIE}/data genie_config/data` with `ORIG_GENIE` = the **base ups `v3_06_02e`** —
+whose `data/evgen/hadron_tensors/` contains only `crpa_susav2` and `nieves`, **no `martini`**. The
+Martini/Empirical tensors exist **only in the custom build** (`Generator/data/evgen/hadron_tensors/
+martini/`, `local_install/GENIE-Generator/data/...`). So `MartiniMECHadronTensorModel` can't load
+its `.dat` files → can't configure → the Martini PXSec can't resolve `HadronTensorAlg` → the dial
+→ 1.0. (The `MECq0q3Interp` SuSAToMar/Val dials work because they use **precomputed** weight files
+from `sbndata`, not the live model.)
+**Fix applied (data shipping):** ship the custom `martini` hadron tensors in the tarball
+(`genie_config/hadron_tensors_custom/martini`, 16M) and build `genie_config/data` in `job.sh` as a
+merged tree (base subdirs symlinked from `${ORIG_GENIE}/data` + the shipped martini dir).
+
+**VALIDATION (ran the built `UpdateReweight` on 200 events with the fix):** the Martini `FATAL`
+is **gone** and the model now instantiates — but the data fix is **necessary, not sufficient**.
+`XSecShape_CCMEC_Martini` / `_Empirical` still output **1.0** on the exact CC-MEC events where the
+generic `XSecShape_CCMEC` correctly morphs (e.g. evt 39: XSecShape=1.667, Martini=1.0). AR23_20i's
+default MEC model is `genie::SuSAv2MECPXSec` (`AR23_20i/ModelConfiguration.xml`), which the morph
+gate (`GReWeightXSecMEC::CalcWeightXSecShape_Martini`, line ~144) *does* handle — yet the weight
+comes back unity. So there is a **second bug inside the custom `GReWeightXSecMEC.cxx`** weight
+logic (the file is WIP, e.g. line 405 `TODO: Change this line once the Martini model is available
+in GENIE`, line 380 `TODO: change hard-coding`). Pinning it needs a `pDEBUG`/`RwMEC` run to see the
+per-event `diff_xsec_def`/`diff_xsec_alt`.
+
+Note these dials are **redundant** with the working `MECq0q3InterpWeighting` SuSA→Martini/Valencia
+dials (precomputed weight tables from `sbndata` — those already produce real MEC-model variation).
+→ **Options:** (a) keep the data fix and debug `GReWeightXSecMEC.cxx`; or (b) keep the data fix
+(removes the FATAL spam) but drop the `_Martini`/`_Empirical` dials from the fcl as redundant.
 
 ### 1c. Expected / benign (not bugs)
 - `CCQEXSecCorr`, `Theta_Delta2Npi`, `VecFFCCQEshape`: corrections — `UpdateReweight.cxx:289`

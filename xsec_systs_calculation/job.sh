@@ -43,7 +43,27 @@ mkdir -p $WORKDIR && cd $WORKDIR
 # Set up custom GENIE environment inside writeable WORKDIR by linking config and original data catalogues
 mkdir -p genie_config
 ln -s ${CODEDIR}/genie_config/config genie_config/config
-ln -s ${ORIG_GENIE}/data genie_config/data
+
+# Build a MERGED data tree instead of a flat symlink to ${ORIG_GENIE}/data.
+# The base ups GENIE data lacks the Martini MEC hadron tensors
+# (data/evgen/hadron_tensors/martini), which the alternative-MEC reweight dials
+# (XSecShape_CCMEC_Martini, ...) need. We mirror the base tree with symlinks and
+# inject the custom Martini tensors shipped in the tarball.
+mkdir -p genie_config/data/evgen/hadron_tensors
+for p in ${ORIG_GENIE}/data/*; do
+  bn=$(basename "$p"); [ "$bn" = "evgen" ] && continue
+  ln -sfn "$p" genie_config/data/"$bn"
+done
+for p in ${ORIG_GENIE}/data/evgen/*; do
+  bn=$(basename "$p"); [ "$bn" = "hadron_tensors" ] && continue
+  ln -sfn "$p" genie_config/data/evgen/"$bn"
+done
+for p in ${ORIG_GENIE}/data/evgen/hadron_tensors/*; do
+  ln -sfn "$p" genie_config/data/evgen/hadron_tensors/"$(basename "$p")"
+done
+# inject the custom Martini MEC hadron tensors (absent from the base ups release)
+ln -sfn ${CODEDIR}/genie_config/hadron_tensors_custom/martini genie_config/data/evgen/hadron_tensors/martini
+
 export GENIE="${WORKDIR}/genie_config"
 export GENIE_REWEIGHT="${WORKDIR}/genie_config"
 
