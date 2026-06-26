@@ -172,3 +172,17 @@ standalone branches correctly go to 1.0 (responseless). Note: at negative amplit
 −0.5/−1) the angular model dips negative (~−2) — an inherent property of the linear isotropic↔cos²
 interpolation extrapolated to negative amplitude; these are clipped to 0 by the analysis tooling
 (`systs.py` `clip(lower_bound=0)`).
+
+## Issue 5 — XSecShape CCMEC morph weights: intermittent NaN/inf + extreme outliers (guarded)
+After wiring the DecayAng response, a clean production build showed `XSecShape_CCMEC_Martini`/
+`_Empirical` (and the generic `XSecShape_CCMEC`) emit **NaN/inf** at a couple of pathological MEC
+events (53, 163), plus large finite outliers (generic up to ~162×). Investigation: the same events
+on a *rebuild* came back finite — i.e. it's an **intermittent, build-sensitive numerical
+instability** (the likelihood ratio `tweaked_prob_density / prob_density_def` degenerating when the
+default-model density ~0), **not a deterministic regression** from the DecayAng work. NaN/inf is not
+caught by the downstream `clip(lower_bound=0)` and would corrupt the histograms.
+→ **Fix (`Reweight_XSecShape_guard_clamp.patch`, pushed to `pgranger23/Reweight`):** in all three
+`CalcWeightXSecShape*` functions, substitute unity for non-finite weights and clamp to MEC-style
+limits `[0.1, 1000]` (matching `MECq0q3InterpWeighting`'s `WeightLimits`). Validated: no NaN/inf;
+DecayAng response unaffected. The guarded `libGRwClc` was installed into `local_install/lib` so a
+clean `build_with_reweight.sh` ships it.

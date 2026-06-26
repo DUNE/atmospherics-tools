@@ -1,0 +1,76 @@
+commit 3ea24a559a7766707d7935f8f0995ac19410a596
+Author: Pierre Granger <pierre.granger@cea.fr>
+Date:   Fri Jun 26 15:27:05 2026 -0500
+
+    Guard + clamp XSecShape CCMEC morph weights against non-finite / extreme values
+    
+    The CalcWeightXSecShape{,_Empirical,_Martini} likelihood-ratio
+    (tweaked_prob_density / prob_density_def) can intermittently go non-finite
+    (NaN/inf) or extreme at rare pathological MEC events where the default-model
+    probability density degenerates (observed as NaN at a couple of events in one
+    clean build, finite on rebuild -> a latent, build-sensitive numerical
+    instability, NOT a deterministic regression). NaN/inf is not handled by the
+    downstream clip and would corrupt the output. Substitute unity for non-finite
+    weights and clamp to MEC-style limits [0.1, 1000] (as MECq0q3InterpWeighting
+    already does). Validated: no NaN/inf; the clamp floors at 0.1.
+    
+    Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+diff --git a/src/RwCalculators/GReWeightXSecMEC.cxx b/src/RwCalculators/GReWeightXSecMEC.cxx
+index 467d2306..e50949a8 100644
+--- a/src/RwCalculators/GReWeightXSecMEC.cxx
++++ b/src/RwCalculators/GReWeightXSecMEC.cxx
+@@ -1084,6 +1084,17 @@ double GReWeightXSecMEC::CalcWeightXSecShape(const genie::EventRecord& event)
+   // The weight is then the likelihood ratio
+   double weight = tweaked_prob_density / prob_density_def;
+ 
++  // Guard pathological MEC events where the default-model probability density
++  // degenerates -> a non-finite or extreme shape weight. Substitute unity for
++  // non-finite, then clamp to MEC-style limits [0.1, 1000].
++  if ( !std::isfinite(weight) ) {
++    LOG("ReW", pDEBUG) << "Non-finite XSecShape weight (tweaked_prob_density="
++      << tweaked_prob_density << ", prob_density_def=" << prob_density_def
++      << ") -> returning 1";
++    weight = 1.;
++  }
++  weight = std::max( 0.1, std::min( 1000., weight ) );
++
+   LOG("ReW", pDEBUG) << "xsec_def = " << diff_xsec_def << ", xsec_alt = " << diff_xsec_alt;
+   LOG("ReW", pDEBUG) << "tot_xsec_def = " << tot_xsec_def << ", tot_xsec_alt = " << tot_xsec_alt;
+   LOG("ReW", pDEBUG) << "twk_dial = " << fCCXSecShapeTwkDial << ", prob_density_def = "
+@@ -1240,6 +1251,17 @@ double GReWeightXSecMEC::CalcWeightXSecShape_Empirical(const genie::EventRecord&
+   // The weight is then the likelihood ratio
+   double weight = tweaked_prob_density / prob_density_def;
+ 
++  // Guard pathological MEC events where the default-model probability density
++  // degenerates -> a non-finite or extreme shape weight. Substitute unity for
++  // non-finite, then clamp to MEC-style limits [0.1, 1000].
++  if ( !std::isfinite(weight) ) {
++    LOG("ReW", pDEBUG) << "Non-finite XSecShape weight (tweaked_prob_density="
++      << tweaked_prob_density << ", prob_density_def=" << prob_density_def
++      << ") -> returning 1";
++    weight = 1.;
++  }
++  weight = std::max( 0.1, std::min( 1000., weight ) );
++
+   LOG("ReW", pDEBUG) << "xsec_def = " << diff_xsec_def << ", xsec_alt = " << diff_xsec_alt;
+   LOG("ReW", pDEBUG) << "tot_xsec_def = " << tot_xsec_def << ", tot_xsec_alt = " << tot_xsec_alt;
+   LOG("ReW", pDEBUG) << "twk_dial = " << fCCXSecShapeEmpiricalTwkDial << ", prob_density_def = "
+@@ -1439,6 +1461,17 @@ double GReWeightXSecMEC::CalcWeightXSecShape_Martini(const genie::EventRecord& e
+   // The weight is then the likelihood ratio
+   double weight = tweaked_prob_density / prob_density_def;
+ 
++  // Guard pathological MEC events where the default-model probability density
++  // degenerates -> a non-finite or extreme shape weight. Substitute unity for
++  // non-finite, then clamp to MEC-style limits [0.1, 1000].
++  if ( !std::isfinite(weight) ) {
++    LOG("ReW", pDEBUG) << "Non-finite XSecShape weight (tweaked_prob_density="
++      << tweaked_prob_density << ", prob_density_def=" << prob_density_def
++      << ") -> returning 1";
++    weight = 1.;
++  }
++  weight = std::max( 0.1, std::min( 1000., weight ) );
++
+   LOG("ReW", pDEBUG) << "xsec_def = " << diff_xsec_def << ", xsec_alt = " << diff_xsec_alt;
+   LOG("ReW", pDEBUG) << "tot_xsec_def = " << tot_xsec_def << ", tot_xsec_alt = " << tot_xsec_alt;
+   LOG("ReW", pDEBUG) << "twk_dial = " << fCCXSecShapeMartiniTwkDial << ", prob_density_def = "
