@@ -87,6 +87,27 @@ FetchContent-pulls — `github.com/pgranger23/nusystematics`, branch `dune_atmos
 (file `src/nusystematics/systproviders/GENIEReWeightEngineConfig.cc`). Apply
 `nusystematics_MEC_dials.patch` there and push; a clean `build_with_reweight.sh` will then pick it
 up. (A local validated build with the fix is in `build/Linux/lib/libnusystematics_systproviders.so`.)
+**PUSHED** to the fork's `dune_atmospherics_fix_inf` branch.
+
+### 1d. The other inert MEC dials — investigated; each a distinct, deeper issue
+Wiring the engine makes `XSecShape_CCMEC_{Martini,Empirical}` work (validated: weights ~0.28–1.43 /
+0.015–3.74). The remaining inert MEC dials are NOT the same bug — instrumented (`std::cerr`) runs
+pinned each:
+- **`FracDelta_CCMEC`** — by design unavailable for SuSAv2. In `GReWeightXSecMEC::CalcWeightPNDelta`
+  the delta-fraction term is **commented out** (~lines 860-861, "DeltaNotDelta only works for
+  Valencia"); the SuSAv2 branch (~line 777) computes only `pn_frac`, never `delta_frac`. AR23_20i is
+  SuSAv2 ⇒ no effect. Needs a SuSAv2 delta-fraction implementation (the file's own TODO).
+- **`EnergyDependence_CCMEC`** — wiring is correct (its `SetSystematic` now fires), but
+  `BuildEnergyDepRatioGraphs` yields a **trivial envelope**: the trace shows `r_upper = r_lower = 1`
+  at every energy, so `weight = 1 + twk·(r−1) = 1`. The alt models used for the envelope don't differ
+  from SuSAv2 in normalised energy shape — a model/config issue in the envelope construction, not the
+  dial wiring. (Kept in the fix since the wiring is correct.)
+- **`DecayAng2MEC`** — a **responseless** "frequency" param. In `CalcWeightAngularDist` the weight is
+  `3·twk_dial·cos²(twk_dial2·θ) + (1−twk_dial)` with `twk_dial`=DecayAngMEC (amplitude),
+  `twk_dial2`=DecayAng2MEC (frequency); when DecayAngMEC=0 (its nominal, as when DecayAng2MEC is
+  varied alone) it collapses to 1 regardless of DecayAng2MEC. Its real effect is delivered jointly via
+  the `DecayAngMECVariationResponse` response param (`AddResponseAndDependentDials`, not
+  `AddIndependentParameters`). So it was **removed** from the independent-dial fix.
 
 ### 1c. Expected / benign (not bugs)
 - `CCQEXSecCorr`, `Theta_Delta2Npi`, `VecFFCCQEshape`: corrections — `UpdateReweight.cxx:289`

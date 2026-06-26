@@ -1,12 +1,9 @@
 diff --git a/src/nusystematics/systproviders/GENIEReWeightEngineConfig.cc b/src/nusystematics/systproviders/GENIEReWeightEngineConfig.cc
-index 4ca56cb..319f62c 100644
+index 4ca56cb..d6c70a2 100644
 --- a/src/nusystematics/systproviders/GENIEReWeightEngineConfig.cc
 +++ b/src/nusystematics/systproviders/GENIEReWeightEngineConfig.cc
-@@ -298,9 +298,13 @@ ConfigureMECWeightEngine(SystMetaData const &MECmd,
-         kXSecTwkDial_NormNCMEC,
-         kXSecTwkDial_NormEMMEC,
+@@ -300,7 +300,10 @@ ConfigureMECWeightEngine(SystMetaData const &MECmd,
          kXSecTwkDial_DecayAngMEC,
-+        kXSecTwkDial_DecayAng2MEC,
          kXSecTwkDial_FracPN_CCMEC,
          kXSecTwkDial_FracDelta_CCMEC,
 -        kXSecTwkDial_XSecShape_CCMEC
