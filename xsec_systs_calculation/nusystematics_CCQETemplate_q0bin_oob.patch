@@ -1,0 +1,27 @@
+diff --git a/src/nusystematics/systproviders/CCQETemplateReweight_tool.cc b/src/nusystematics/systproviders/CCQETemplateReweight_tool.cc
+index 5523786..c2f159a 100644
+--- a/src/nusystematics/systproviders/CCQETemplateReweight_tool.cc
++++ b/src/nusystematics/systproviders/CCQETemplateReweight_tool.cc
+@@ -216,6 +216,10 @@ CCQETemplateReweight::GetEventResponse(genie::EventRecord const &ev) {
+   // Determine which q0 bin this event belongs to
+   double q0_value = emTransfer.E();
+   int q0_bin_index = GetQ0BinIndex(q0_value);
++  // Defensive clamp: ResponseParameterIndices and resp are sized Nq0Bins, so an
++  // out-of-range bin index (or a NaN q0) would index out of bounds -> segfault.
++  if (q0_bin_index < 0) q0_bin_index = 0;
++  else if (q0_bin_index >= static_cast<int>(Nq0Bins)) q0_bin_index = static_cast<int>(Nq0Bins) - 1;
+   // std::cout << "[CCQETemplateReweight::GetEventResponse] q0=" << q0_value 
+   //          << " -> bin " << q0_bin_index << " -> resp index " << ResponseParameterIndices[q0_bin_index] << std::endl;
+ 
+@@ -285,7 +289,10 @@ int CCQETemplateReweight::GetQ0BinIndex(double q0_value) const {
+   }
+   
+   if (q0_cutoff >= q0BinEdges[Nq0Bins]) {
+-    return Nq0Bins;
++    // Overflow: q0 at/above the top edge belongs in the LAST bin
++    // (index Nq0Bins-1). Returning Nq0Bins is out of range for the
++    // Nq0Bins-sized ResponseParameterIndices/resp arrays -> segfault.
++    return static_cast<int>(Nq0Bins) - 1;
+   }
+   
+   // Fallback 

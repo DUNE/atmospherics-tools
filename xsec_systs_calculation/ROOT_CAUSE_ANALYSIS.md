@@ -186,3 +186,20 @@ caught by the downstream `clip(lower_bound=0)` and would corrupt the histograms.
 limits `[0.1, 1000]` (matching `MECq0q3InterpWeighting`'s `WeightLimits`). Validated: no NaN/inf;
 DecayAng response unaffected. The guarded `libGRwClc` was installed into `local_install/lib` so a
 clean `build_with_reweight.sh` ships it.
+
+## Issue 6 — CCQETemplateReweight segfault on high-q0 events (grid job 69)
+Grid job 69 (events 207000-210000) **segfaulted** in `CCQETemplateReweight::GetEventResponse`
+(`CCQETemplateReweight_tool.cc:234`). Root cause: `GetQ0BinIndex` returns **`Nq0Bins`** for any
+event with `q0 >= q0BinEdges[Nq0Bins]` (the top bin edge), but `ResponseParameterIndices` and the
+`resp` vector are sized `Nq0Bins` (valid indices `0..Nq0Bins-1`). `GetEventResponse` then indexes
+`ResponseParameterIndices[Nq0Bins]` / `resp[Nq0Bins]` **out of bounds → SIGSEGV**. Triggered by rare
+high-q0 (high-energy atmospheric) events (~1 in 2e5), so only ~1 job in ~960 hits it per run.
+**Severity is amplified by `job.sh` having no `set -e`:** the crash truncates the output yet the job
+still `ifdh cp`s the partial file and exits 0 — so truncated outputs look "successful".
+→ **Fix (`nusystematics_CCQETemplate_q0bin_oob.patch`, pushed to `pgranger23/nusystematics`,
+`14c06d1`):** return the last valid bin (`Nq0Bins-1`) for the q0-overflow case, plus a defensive
+clamp of `q0_bin_index` in `GetEventResponse`. **Validated:** re-running the job-69 range
+(`-s 207000 -N 1000`, incl. entry 207567) completes with no segfault, all 1000 events written,
+all CCQETemplate dials finite. The fixed `libnusystematics` is in the repackaged
+`xsec_systs_calculation_wmec.tar.gz`. NOTE: any job whose output is short/undersized
+(full ~4.8 MB / 3000 events) likely crashed and must be resubmitted.
