@@ -1045,6 +1045,26 @@ def create_oscillation_yaml_from_systematics(systematics: list[Systematic],
     return yaml_str
 
 def add_headers_to_root_file(systs:SystConfig, fname:str) -> None:
+    """Append a `systsHeader` TTree (name, cv, variations, id, isCorrection) so the
+    output is self-describing.
+
+    The merged production files are ~5 GB. uproot's writer overflows a 32-bit key
+    offset when appending to files > 2 GB ("'i' format requires ... <= 2147483647"),
+    so for large files this delegates to PyROOT's TFile UPDATE (native large-file
+    support), which only appends the tree and never re-reads SystWeights/genieEvt.
+    Small files keep going through uproot (no ROOT dependency needed).
+    """
+    import os
+    if os.path.getsize(fname) > 2_000_000_000:
+        try:
+            _add_systs_header_root(systs, fname)
+            return
+        except ImportError as e:
+            raise RuntimeError(
+                f"{fname} is >2 GB; appending the header needs ROOT because uproot "
+                f"cannot write keys past 2 GB. Run inside the SL7/ROOT environment."
+            ) from e
+
     systs_data = {'name':[], 'cv': [], 'variations': [], 'id': [], 'isCorrection': []}
 
     for syst in systs.get_all_systs():
@@ -1058,3 +1078,41 @@ def add_headers_to_root_file(systs:SystConfig, fname:str) -> None:
     with uproot.update(fname) as f:
         f['systsHeader'] = pd.DataFrame(systs_data)
     print(f"Added systsHeader to {fname}")
+
+
+def _add_systs_header_root(systs:SystConfig, fname:str) -> None:
+    """Large-file-safe `systsHeader` writer using PyROOT (TFile UPDATE).
+
+    Appends a TTree with the same schema uproot would write
+    (name/cv/variations/id/isCorrection); works on files of any size and leaves
+    the existing trees untouched. Requires ROOT (PyROOT).
+    """
+    import ROOT
+    from array import array
+    f = ROOT.TFile.Open(fname, "UPDATE")
+    if not f or f.IsZombie():
+        raise IOError(f"Could not open {fname} for UPDATE")
+    t = ROOT.TTree("systsHeader", "systematics header")
+    s_name = ROOT.std.string()
+    a_cv = array('d', [0.0])
+    a_id = array('q', [0])
+    a_corr = array('b', [0])
+    v_var = ROOT.std.vector('double')()
+    t.Branch("name", s_name)
+    t.Branch("cv", a_cv, "cv/D")
+    t.Branch("variations", v_var)
+    t.Branch("id", a_id, "id/L")
+    t.Branch("isCorrection", a_corr, "isCorrection/O")
+    for syst in systs.get_all_systs():
+        s_name.assign(str(syst.name))
+        a_cv[0] = float(syst.cv)
+        a_id[0] = int(syst.id)
+        a_corr[0] = 1 if syst.isCorrection else 0
+        v_var.clear()
+        for x in syst.paramVariations:
+            v_var.push_back(float(x))
+        t.Fill()
+    n = t.GetEntries()
+    t.Write("", ROOT.TObject.kOverwrite)
+    f.Close()
+    print(f"Added systsHeader ({n} rows) to {fname} via ROOT (large-file safe)")
