@@ -2,7 +2,7 @@
 #include "yaml-cpp/yaml.h"
 #include "TH1.h"
 #include "TCanvas.h"
-
+#include "TFile.h"
 #include <vector>
 
 #include "Reader.h"
@@ -78,7 +78,8 @@ class SampleManager {
   AnalysisBinningManager<T>* AnalysisBinning;
   FluxManager* FlxMgr;
   OscillatorBase* OscillBase;
-
+  TFile* output_root_ratios = nullptr;
+  std::string OutputRootRatios;
   std::string OutputFileName_1D;
   std::string OutputFileName_2D;
   std::string OutputRootName;

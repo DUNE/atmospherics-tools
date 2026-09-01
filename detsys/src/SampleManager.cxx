@@ -318,7 +318,10 @@ void SampleManager<T>::Plot1DRatioHists(TCanvas* Canv, std::vector<TH1*> Hists) 
 
   for (size_t iSamp=0;iSamp<Hists.size();iSamp++) {
     Hists[iSamp]->GetYaxis()->SetTitle(std::string("Ratio to "+SampleNameToRatioTo).c_str());
-
+    if(output_root_ratios){
+      output_root_ratios->cd();
+      Hists[iSamp]->Write();
+    }
     if (iSamp==0) {
       Hists[iSamp]->Draw((DrawOptions_1D).c_str());
     } else {
@@ -370,7 +373,7 @@ void SampleManager<T>::Plot1DHists(TCanvas* Canv, std::vector<TH1*> Hists) {
       Hists[iSamp]->Draw((DrawOptions_1D+" SAME").c_str());
     }
 
-    Legends[iSamp] = new TLegend(0.8,0.9-(1.0+static_cast<T>(iSamp))*LegendHeight,0.99,0.9-static_cast<T>(iSamp)*LegendHeight);
+    Legends[iSamp] = new TLegend(0.7,0.9-(1.0+static_cast<T>(iSamp))*LegendHeight,0.99,0.9-static_cast<T>(iSamp)*LegendHeight);
     Legends[iSamp]->SetTextSize(FontSize);
     Legends[iSamp]->AddEntry(Hists[iSamp],(Samples[iSamp]->GetName()).c_str(),"l");
     //Legends[iSamp]->AddEntry((TObject*)0,Form("Entries: %4.5f",Hists[iSamp]->GetEntries()),"");
@@ -492,7 +495,6 @@ void SampleManager<T>::Plot1DWithRatio(TCanvas* Canv, std::vector<TH1*> Hists) {
     RatioHists[iSamp]->GetXaxis()->SetLabelSize(0.10);
 
     RatioHists[iSamp]->GetYaxis()->SetNdivisions(505);
-
   }
   for (size_t iSamp=0;iSamp<Hists.size();iSamp++) {
     //RatioHists[iSamp]->GetYaxis()->SetRangeUser(min-0.02,max+0.02);
@@ -508,7 +510,10 @@ void SampleManager<T>::Plot1DWithRatio(TCanvas* Canv, std::vector<TH1*> Hists) {
         RatioHists[iSamp]->SetBinError(xBin,0.0);
       }
     }*/
-
+    if(output_root_ratios){
+      output_root_ratios->cd();
+      RatioHists[iSamp]->Write();
+    }
     if (iSamp==0) {
       RatioHists[iSamp]->Draw(DrawOptions_1D.c_str());
     } else {
@@ -801,7 +806,7 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   Canv->SetGridx();
   Canv->SetRightMargin(0.2);
   Canv->SetLeftMargin(0.15);
-  Canv->SetBottomMargin(0.2);
+  Canv->SetBottomMargin(0.25);
   Canv->Print((OutputFileName_1D+"[").c_str());
 
   std::vector<TH1*> Hists(Samples.size());
@@ -829,6 +834,8 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
     }
     Hists[iSamp]->SetLineWidth(2);
     Hists[iSamp]->GetXaxis()->CenterLabels(true);
+    Hists[iSamp]->GetXaxis()->SetLabelSize(0.05);
+    Hists[iSamp]->SetTitleSize(0.05);
   }
 
 
@@ -903,11 +910,13 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   latex.SetTextFont(42);          // nice standard font
   Canv->SetGridx(false);
   gPad->SetRightMargin(0.2);
+  gPad->SetLeftMargin(0.2);
   CovarianceMatrix->GetXaxis()->CenterTitle();
   CovarianceMatrix->GetYaxis()->CenterTitle();
   CovarianceMatrix->GetZaxis()->SetTitle("Relative Covariance");
   CovarianceMatrix->GetZaxis()->SetTitleOffset(1.4);
   CovarianceMatrix->GetZaxis()->CenterTitle();
+  CovarianceMatrix->GetZaxis()->SetTitleSize(0.05);
   if (BinLabels.size()!=0){
     for (size_t iBin = 0; iBin < BinLabels.size(); iBin++){
       CovarianceMatrix->GetXaxis()->SetBinLabel(iBin+1, BinLabels[iBin].c_str());
@@ -919,6 +928,8 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   }
   CovarianceMatrix->GetXaxis()->CenterLabels(true);
   CovarianceMatrix->GetYaxis()->CenterLabels(true);
+  CovarianceMatrix->GetXaxis()->SetLabelSize(0.05);
+  CovarianceMatrix->GetYaxis()->SetLabelSize(0.05);
   CovarianceMatrix->Draw("COLZ");
   latex.DrawLatex(0.25, 0.85, "#bf{DUNE} Work in Progress");
 
@@ -1002,10 +1013,18 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
 
 template<typename T>
 void SampleManager<T>::Plot1D(YAML::Node Config) {
-
+  OutputRootRatios = Config["OutputRootRatios"].as<std::string>();
   OutputFileName_1D = Config["OutputName"].as<std::string>();
   DrawOptions_1D = Config["DrawOpts"].as<std::string>();
   SampleNameToRatioTo = Config["RatioDenominatorSample"].as<std::string>();
+
+  output_root_ratios = TFile::Open(OutputRootRatios.c_str(),"RECREATE");
+
+  if (!output_root_ratios || output_root_ratios->IsZombie()) {
+    std::cerr << "Could not open ROOT output file: "
+              << OutputRootName << std::endl;
+    throw std::runtime_error("Failed to open ROOT output file");
+  }
 
   int plotRatiosSameCanvas = 0;
   if (Config["RatioSameCanvas"]){
@@ -1057,7 +1076,6 @@ void SampleManager<T>::Plot1D(YAML::Node Config) {
 
   //===============================================================================
   //Observations
-
   for (int iObs=0;iObs<ObsManager->GetNObservables();iObs++) {
     if (ObsManager->GetObservable(iObs)->GetNDimensions() != 1) continue;
 
@@ -1078,6 +1096,9 @@ void SampleManager<T>::Plot1D(YAML::Node Config) {
   }
 
   Canv->Print((OutputFileName_1D+"]").c_str());
+  output_root_ratios->Close();
+  delete output_root_ratios;
+  output_root_ratios = nullptr;
 }
 
 template<typename T>
