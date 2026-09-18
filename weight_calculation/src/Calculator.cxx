@@ -54,7 +54,7 @@ void Calculator<T>::Process(){
         double final_oscillated_w = 0;
 
         if(_osc_calculator && _earth){
-            std::tie(osc_from_e_w, osc_from_mu_w) = GetOscWeight(Enu, costh, (Flavour)data.nuPDG);
+            std::tie(osc_from_e_w, osc_from_mu_w) = GetOscWeight(Enu, -costh, (Flavour)data.nuPDG);
             final_oscillated_w = xsec_w*(osc_from_e_w*nuE_w + osc_from_mu_w*nuMu_w);
         }
 
