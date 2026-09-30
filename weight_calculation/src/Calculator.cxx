@@ -2,8 +2,8 @@
 #include "progressbar.hpp"
 
 template<typename T>
-Calculator<T>::Calculator(const FluxManager& mgr, Reader<T>& rdr, Writer& wrt, float exposure_scaling)
-: _mgr(mgr), _rdr(rdr), _wrt(wrt), _exposure_scaling(exposure_scaling)
+Calculator<T>::Calculator(const FluxManager& mgr, Reader<T>& rdr, Writer& wrt, float exposure_scaling, double TotalPOT)
+  : _mgr(mgr), _rdr(rdr), _wrt(wrt), _exposure_scaling(exposure_scaling), _TotalPOT(TotalPOT)
 {
 }
 
@@ -24,8 +24,14 @@ Data<double> Calculator<double>::FetchData(){
 
 template<typename T>
 void Calculator<T>::Process(){
-    double POT = _rdr.POT();
+  double POT;
+
+  if (_TotalPOT < 0) {
+    POT = _rdr.POT();
     std::cout << "Got POT of: " << POT << std::endl;
+  } else {
+    POT = _TotalPOT;
+  }
     int nentries = _rdr.GetNentries();
     progressbar bar(nentries);
     bar.set_todo_char(" ");

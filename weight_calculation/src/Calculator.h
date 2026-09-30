@@ -16,6 +16,7 @@ private:
     float _exposure_scaling;
     float _prodh;
     float _rdet;
+    double _TotalPOT;
     osc::PMNS* _osc_calculator = nullptr;
     osc::EarthModel* _earth = nullptr;
 
@@ -25,7 +26,7 @@ private:
     
 
 public:
-    Calculator(const FluxManager& mgr, Reader<T>& rdr, Writer& wrt, float exposure_scaling);
+    Calculator(const FluxManager& mgr, Reader<T>& rdr, Writer& wrt, float exposure_scaling, double TotalPOT);
     ~Calculator();
     void Process();
     void SetOscCalculator(osc::PMNS *pmns, osc::EarthModel *earth, float prodh, float rdet);

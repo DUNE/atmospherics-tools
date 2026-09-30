@@ -35,5 +35,13 @@ target_include_directories(split_channels
   $ENV{SRPROXY_INC}
 )
 
-install(TARGETS weightor split_channels RUNTIME DESTINATION bin)
+add_executable(POTCalculator POTCalculator.cxx)
+target_link_libraries(POTCalculator
+  LINK_PUBLIC WeightorIO ROOT::EG ${ROOT_LIBRARIES} argparse GENIE3::All)
+target_include_directories(POTCalculator
+  PRIVATE
+  $ENV{SRPROXY_INC}
+)
+
+install(TARGETS weightor split_channels POTCalculator RUNTIME DESTINATION bin)
 

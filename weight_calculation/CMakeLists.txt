@@ -41,7 +41,7 @@ if(ROOT_FOUND)
   include(${ROOT_USE_FILE})
 endif(ROOT_FOUND)
 
-find_package(duneanaobj 03.05.00 REQUIRED)
+find_package(duneanaobj 03.12.00 REQUIRED)
 
 if(DEFINED ENV{NuHepMCModules_ROOT})
   include($ENV{NuHepMCModules_ROOT}/NuHepMCModules.cmake)

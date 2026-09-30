@@ -72,6 +72,11 @@ int main(int argc, char const *argv[])
         .scan<'g', float>()
         .help("List of 6 oscillation parameters to use under the form: th12 th23 th13 dcp dms12 dms23 (rad, eV^2)\nDefault values are taken from NuFIT 5.2 w. SK atm.: 0.583 0.737 0.150 4.05 7.41e-5 2.51e-3");
 
+    parser.add_argument("-p","--POT")
+      .default_value(-1.0)
+      .scan<'g', double>()
+      .help("Total POT of all files if considering more than single file");
+
     try {
         parser.parse_args(argc, argv);
     }
@@ -101,6 +106,8 @@ int main(int argc, char const *argv[])
         {Flavour::Reference, ref_file}
     };
 
+    double TotalPOT = parser.get<double>("-p"); 
+
     std::string ifilename(parser.get<std::string>("-i"));
     std::string ofilename(parser.get<std::string>("-o"));
 
@@ -120,7 +127,7 @@ int main(int argc, char const *argv[])
 
     DirWriter writer(ofilename);
 
-    Calculator<float> calc(manager, reader, writer, exposure_scaling);
+    Calculator<float> calc(manager, reader, writer, exposure_scaling, TotalPOT);
 
     osc::EarthModel earth(earth_model.c_str(), 0.02);
     osc::PMNS pmns(pmns_params[0],
