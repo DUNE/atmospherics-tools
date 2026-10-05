@@ -38,6 +38,7 @@ class Sample {
   int LineStyle;
   std::string FilePath;
   std::string TupleName;
+  bool fix_cvn;
 
   Reader<T>* SampleReader;
   std::vector<Measurement<T>> Measurements;

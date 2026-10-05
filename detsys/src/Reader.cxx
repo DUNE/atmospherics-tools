@@ -3,8 +3,9 @@
 #include <filesystem>
 
 template<typename T>
-Reader<T>::Reader(std::string fname, std::string subfolder) {
-  _fname = fname;
+Reader<T>::Reader(std::string fname, std::string subfolder, bool fixCVN) {
+  //_fname = fname;
+  _fixCVN = fixCVN; 
   this->SetupTree();
   this->Open(fname, subfolder);
   _data = Data<T>();
@@ -290,11 +291,12 @@ void Reader<T>::UpdateData(){
 
 
   // TODO: fix this! Make this a mandatory argument in the yaml file
-  if(_fname == "./data/Deprecated/Recombination_n1Sig"){ 
-      _data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.numu;
+  //if(_fname == "./data/Deprecated/Recombination_n1Sig"){ 
+  if(_fixCVN){   
+      _data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.nc;
   }
   else{
-      _data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.nc;
+      _data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.numu;
   }
 
   //_data.cvn_nc = _sr->common.ixn.pandora[0].nuhyp.cvn.nc;

@@ -20,7 +20,8 @@
 template <typename T>
 class Reader {
  private:
-  std::string _fname = "";
+  //std::string _fname = "";
+  bool _fixCVN;
   TFile *_file = nullptr;
   TChain *_Chain = nullptr;
   TChain *_global_chain = nullptr;
@@ -45,7 +46,7 @@ class Reader {
   void UpdateData();
   
  public:
-  Reader(std::string fname, std::string subfolder = "");
+  Reader(std::string fname, std::string subfolder = "", bool fixCVN = false);
   Reader(TChain *Chain);
   ~Reader();
   double POT(){return _POT;};

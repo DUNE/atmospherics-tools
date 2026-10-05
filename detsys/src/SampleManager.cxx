@@ -12,9 +12,14 @@ Sample<T>::Sample(YAML::Node SampleConfig) {
   LineStyle = SampleConfig["LineStyle"].as<int>();
   FilePath = SampleConfig["FilePath"].as<std::string>();
   TupleName = SampleConfig["SubDirectoryName"].as<std::string>();
+ 
+  fix_cvn = false;
+  if (SampleConfig["FixCVN"]){ 
+    fix_cvn = SampleConfig["FixCVN"].as<bool>();
+  }
 
   std::cout << "Initialising sample:" << Name << std::endl;
-  SampleReader = new Reader<T>(FilePath, TupleName);
+  SampleReader = new Reader<T>(FilePath, TupleName, fix_cvn);
 
   std::cout << std::endl;
 }
