@@ -30,3 +30,25 @@ The `split_channel.cxx` code produces a `split_channel` binary that is used to s
 ## Example
 An example input CAF file with ~1M events can be found at Fermilab at `/exp/dune/app/users/pgranger/weightor/caf_sum.root`
 To compute the weights for it with the default parameters, one can simply run `./app/weightor -i /exp/dune/app/users/pgranger/weightor/caf_sum.root -o weighted_caf.root`
+
+# Detsyst
+
+This directory contains apps for comparing CAF files and build covariance matrix for detector systematics estimation.
+
+## Comparison script
+Execute with:
+```./build/app/ComparisonScript Config.yaml```
+
+This app plots various distribution of observables for all the samples given in Config.yaml.
+It also computes the covariance matrix or the ratio of spectra in a root format to use as inputs for the fitters.
+
+NB: If you use an old reco2 version (like for atm production in 2023), there might be a bug in the CVN (CVN numu and NC are inverted). In that case, use "FixCVN: true" in the YAML config for this sample.
+
+## CompareEventByEvent
+Execute with:
+```./build/app/CompareEventByEvent ConfigCompareEventByEvent.yaml```
+
+This app plots relative difference of observables between two samples. The samples must contain the same events: a matching event is done by run, subrun and event number between the two samples. This is useful to compare wiremod and detector variation for instance.
+
+The file UnMatched.pdf plots the observables distributions for the first sample for events with particularly big discerepancies.
+
