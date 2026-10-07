@@ -12,7 +12,7 @@ Sample<T>::Sample(YAML::Node SampleConfig) {
   LineStyle = SampleConfig["LineStyle"].as<int>();
   FilePath = SampleConfig["FilePath"].as<std::string>();
   TupleName = SampleConfig["SubDirectoryName"].as<std::string>();
- 
+
   fix_cvn = false;
   if (SampleConfig["FixCVN"]){ 
     fix_cvn = SampleConfig["FixCVN"].as<bool>();
@@ -39,9 +39,31 @@ float Sample<T>::GetIntegral() {
 template<typename T>
 void Sample<T>::ReadData() {
   std::cout << "Reading data from Sample:" << Name << std::endl;
+  int nPassed=0;
+  int nRejected=0;
+  double totalWeight = 0;
   for (int i=0;i<SampleReader->GetNentries();i++) {
+ 
     SampleReader->GetEntry(i);
+
+    if (EventFilter != nullptr) {
+      EventKey key{
+        static_cast<int>(
+          SampleReader->ReturnKinematicParameter(kRun)),
+        static_cast<int>(
+          SampleReader->ReturnKinematicParameter(kSubrun)),
+        static_cast<int>(
+          SampleReader->ReturnKinematicParameter(kEvent))
+      };
+
+      if (EventFilter->find(key) == EventFilter->end()) {
+        nRejected++;
+        continue;
+      }
+    }
+    nPassed++;
     T EventWeight = SampleReader->GetEventWeight();
+    totalWeight += EventWeight;
     AnalysisBinningHistogram->Fill(SampleReader->ReturnKinematicParameter(kAnalysisBin),EventWeight);
     for (size_t iMeas=0;iMeas<Measurements.size();iMeas++) {
       bool PassesCut = true;
@@ -94,6 +116,9 @@ void Sample<T>::ReadData() {
     Measurements[iMeas].Histogram->Scale(1.0,"width");
    
   }
+  std::cout<<nRejected<<" rejected events"<<std::endl;
+  std::cout<<nPassed<<" events passed the filter"<<std::endl;
+  std::cout<<"Summed weights: "<<totalWeight<<std::endl;
 }
 
 
@@ -253,12 +278,99 @@ void Sample<T>::Scale(T ScaleFactor) {
   }
 }
 
+
+
+/*template<typename T>
+EventKeySet Sample<T>::GetEventKeys()
+{
+    EventKeySet EventKeys;
+
+    for (int i = 0; i < SampleReader->GetNentries(); ++i) {
+
+        SampleReader->GetEntry(i);
+
+        EventKey key{
+            static_cast<int>(
+                SampleReader->ReturnKinematicParameter(kRun)),
+            static_cast<int>(
+                SampleReader->ReturnKinematicParameter(kSubrun)),
+            static_cast<int>(
+                SampleReader->ReturnKinematicParameter(kEvent))
+        };
+
+        EventKeys.insert(key);
+    }
+
+    return EventKeys;
+}*/
+
+template<typename T>
+EventKeySet Sample<T>::GetEventKeys()
+{
+    EventKeySet keys;
+
+    for (Long64_t i = 0; i < SampleReader->GetNentries(); ++i) {
+        keys.insert(SampleReader->GetEventKey(i));
+    }
+
+    return keys;
+}
+
+
+template<typename T>
+void Sample<T>::SetEventFilter(EventKeySet& eventFilter)
+{
+    EventFilter = &eventFilter;
+}
+
 //==========================================================================================================================================================
 
 template<typename T>
-SampleManager<T>::SampleManager(YAML::Node Config) {
-  for (auto SampleNode: Config["Samples"]) {
+void SampleManager<T>::BuildSample(YAML::Node SampleNode, bool isReference)
+{
     Samples.emplace_back(new Sample<T>(SampleNode));
+    if (isReference) {
+        //std::cout<<"initialized reference sample"<<std::endl;
+        ReferenceEvents = Samples.back()->GetEventKeys();
+        std::cout<<"Number of refernece events: "<<ReferenceEvents.size()<<std::endl;
+    }
+    else {
+        Samples.back()->SetEventFilter(ReferenceEvents);
+    }
+}
+
+
+template<typename T>
+SampleManager<T>::SampleManager(YAML::Node Config) {
+  
+  YAML::Node ReferenceNode;
+  
+  for (auto SampleNode: Config["Samples"]) {
+    //Samples.emplace_back(new Sample<T>(SampleNode));
+   
+      if (SampleNode["isRef"] && SampleNode["isRef"].as<bool>()) {
+            if (foundRef) {
+                throw std::runtime_error("More than one sample has isRef: true");
+            }
+
+            foundRef = true;
+            YAML::Node node = SampleNode;
+            ReferenceNode = node;
+      } 
+      
+  }
+
+  if(foundRef){
+    BuildSample(ReferenceNode, true);
+  }
+
+  for (auto SampleNode: Config["Samples"]) {
+
+     if (SampleNode["isRef"] && SampleNode["isRef"].as<bool>()) {
+            continue; //Sample already built
+     }
+
+     BuildSample(SampleNode, false); 
   }
 }
 
@@ -287,6 +399,56 @@ void SampleManager<T>::ScaleToNormalisation(std::string SampleNameToNormTo) {
     Samples[iSamp]->Scale(Factor);
   }
 }
+
+
+template<typename T>
+void SampleManager<T>::ScaleToReferencePOT() {
+
+  if (!foundRef) {
+    std::cerr << "No reference sample found. "
+              << "Cannot scale to reference POT." << std::endl;
+    return;
+  }
+
+  if (Samples.empty()) {
+    std::cerr << "No samples available. "
+              << "Cannot scale to reference POT." << std::endl;
+    return;
+  }
+
+  T ReferencePOT = static_cast<T>(Samples[0]->GetPOT());
+
+  if (ReferencePOT <= 0) {
+    std::cerr << "Reference POT is not positive: "
+              << ReferencePOT << std::endl;
+    return;
+  }
+
+  for (size_t iSamp = 0; iSamp < Samples.size(); iSamp++) {
+
+    T SamplePOT =
+        static_cast<T>(Samples[iSamp]->GetPOT());
+
+    if (SamplePOT <= 0) {
+      std::cerr << "POT for sample "
+                << Samples[iSamp]->GetName()
+                << " is not positive: "
+                << SamplePOT << std::endl;
+      continue;
+    }
+
+    T Factor = SamplePOT / ReferencePOT;
+
+    std::cout << "Scaling "
+              << Samples[iSamp]->GetName()
+              << " by POT factor = "
+              << Factor << std::endl;
+
+    Samples[iSamp]->Scale(Factor);
+  }
+}
+
+
 
 template<typename T>
 void SampleManager<T>::Plot1DRatioHists(TCanvas* Canv, std::vector<TH1*> Hists) {

@@ -4,6 +4,9 @@
 #include "TCanvas.h"
 #include "TFile.h"
 #include <vector>
+#include <unordered_set>
+#include <functional>
+
 
 #include "Reader.h"
 #include "ObservableManager.h"
@@ -19,16 +22,7 @@ struct Measurement {
   std::vector<int> AxisVariables;
 };
 
-struct EventKey {
-  int run;
-  int subrun;
-  int event;
 
-  bool operator<(const EventKey& other) const {
-    return std::tie(run, subrun, event) <
-           std::tie(other.run, other.subrun, other.event);
-  }
-};
 
 template <typename T>
 class Sample {
@@ -39,6 +33,8 @@ class Sample {
   std::string FilePath;
   std::string TupleName;
   bool fix_cvn;
+  const EventKeySet* EventFilter = nullptr;
+
 
   Reader<T>* SampleReader;
   std::vector<Measurement<T>> Measurements;
@@ -49,6 +45,8 @@ class Sample {
 
  public:
   Sample(YAML::Node Config);
+  EventKeySet GetEventKeys();
+  void SetEventFilter(EventKeySet& eventFilter);
   void Scale(T ScaleFactor);
   void SetObservables(ObservableManager<T>* Observable);
   void SetAnalysisBinning(AnalysisBinningManager<T>* AnalysisBinning_);
@@ -56,6 +54,7 @@ class Sample {
   void ReadDataMapping();
   int GetNEvents() {return SampleReader->GetNentries();}
   float GetIntegral();
+  double GetPOT() {return SampleReader->ReturnPOT();};
   std::string GetName() {return Name;}
   TH1* GetMeasurement(int iMeas);
   TH1* GetAnalysisBinningHistogram() {return AnalysisBinningHistogram;}
@@ -92,6 +91,8 @@ class SampleManager {
   T FontSize;
   T RatioYAxisMax;
   T RatioYAxisMin;
+  EventKeySet ReferenceEvents;
+  bool foundRef = false;
 
   void Plot1DRatioHists(TCanvas* Canv, std::vector<TH1*> Hists);
   void Plot1DHists(TCanvas* Canv, std::vector<TH1*> Hists);
@@ -102,7 +103,7 @@ class SampleManager {
  public:
   SampleManager(YAML::Node Config);
   void ScaleToNormalisation(std::string SampleNameToNormTo);
-
+  void ScaleToReferencePOT();
   void SetObservables(ObservableManager<T>* Observable_) {
     ObsManager = Observable_;
 
@@ -123,6 +124,7 @@ class SampleManager {
     }
   }
 
+  void BuildSample(YAML::Node SampleNode, bool isReference);
   void PlotAnalysisBinning(YAML::Node Config);
   void Plot1D(YAML::Node Config);
   void Plot2D(YAML::Node Config);

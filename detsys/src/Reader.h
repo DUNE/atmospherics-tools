@@ -4,6 +4,9 @@
 #include "TChain.h"
 #include <iostream>
 #include <memory>
+#include <unordered_set>
+#include <functional>
+
 
 #include "Data.h"
 #include "Constants.h"
@@ -16,6 +19,37 @@
 #include "AnalysisBinningManager.h"
 #include "FluxManager.h"
 #include "Oscillator/OscillatorFactory.h"
+
+
+
+struct EventKey {
+  int run;
+  int subrun;
+  int event;
+
+  bool operator==(const EventKey& other) const {
+        return run == other.run &&
+               subrun == other.subrun &&
+               event == other.event;
+    }
+
+  bool operator<(const EventKey& other) const {
+    return std::tie(run, subrun, event) <
+           std::tie(other.run, other.subrun, other.event);
+  }
+};
+
+struct EventKeyHash {
+    std::size_t operator()(const EventKey& k) const noexcept {
+        std::size_t h1 = std::hash<int>{}(k.run);
+        std::size_t h2 = std::hash<int>{}(k.subrun);
+        std::size_t h3 = std::hash<int>{}(k.event);
+
+        return h1 ^ (h2 << 1) ^ (h3 << 2);
+    }
+};
+
+using EventKeySet = std::unordered_set<EventKey, EventKeyHash>;
 
 template <typename T>
 class Reader {
@@ -42,7 +76,6 @@ class Reader {
   void Open(std::string fname, std::string subfolder);
   void SetupTree();
   void SetupTreeHierarchical();
-  void GetPOT();
   void UpdateData();
   
  public:
@@ -57,9 +90,12 @@ class Reader {
   TChain* GetTree();
   TFile* GetFile();
   int GetNentries();
+  EventKey GetEventKey(Long64_t i);
   void SetAnalysisBinning(AnalysisBinningManager<T>* AnalysisBinning_) {AnalysisBinning = AnalysisBinning_;}
   void SetOscillator(OscillatorBase* OscillBase_) {OscillBase = OscillBase_;}
   void SetFluxManager(FluxManager* FlxMgr_) {FlxMgr = FlxMgr_;}
+  void GetPOT();
+  double ReturnPOT() const{return _POT;};
   const T ReturnKinematicParameter(int Par);
   const T GetEventWeight();
 };

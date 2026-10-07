@@ -81,7 +81,7 @@ int main(int argc, char const *argv[]) {
   if (Config["General"]["ScaleNormalisationTo"]) {
     Samples.ScaleToNormalisation(Config["General"]["ScaleNormalisationTo"].as<std::string>());
   }
-
+  Samples.ScaleToReferencePOT();
   //============================================================================================================================================================
   if (Config["DrawOptions"]["OneDimension"]) {
     YAML::Node OneDimensionDrawingConfig = Config["DrawOptions"]["OneDimension"];

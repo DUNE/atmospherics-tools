@@ -110,6 +110,18 @@ void Reader<T>::GetPOT(){
 }
 
 template<typename T>
+EventKey Reader<T>::GetEventKey(Long64_t i)
+{
+    _Chain->GetEntry(i);
+
+    return {
+        static_cast<int>(_sr->meta.fd_hd.run),
+        static_cast<int>(_sr->meta.fd_hd.subrun),
+        static_cast<int>(_sr->meta.fd_hd.event)
+    };
+}
+
+template<typename T>
 bool Reader<T>::GetEntry(int i){
   bool retVal;
   if(i == -1){
