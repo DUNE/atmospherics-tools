@@ -52,3 +52,8 @@ This app plots relative difference of observables between two samples. The sampl
 
 The file UnMatched.pdf plots the observables distributions for the first sample for events with particularly big discerepancies.
 
+## root_covariance_to_yaml
+Execute with:
+```./build/app/root_covariance_to_yaml covariance.root covariance.yaml```
+
+This app converts the covariance root file produced byt ComparisonScript to a YAML config file compatible with MaCh3.
