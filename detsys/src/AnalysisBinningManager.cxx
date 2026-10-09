@@ -1,5 +1,9 @@
 #include "AnalysisBinningManager.h"
 #include <iostream>
+#include <sstream>
+#include <iomanip>
+#include <stdexcept>
+
 
 template<typename T>
 AnalysisBinningManager<T>::AnalysisBinningManager(std::string FilePath_) : AnalysisBinningManager(YAML::LoadFile(FilePath_)) {
@@ -65,8 +69,103 @@ AnalysisBinningManager<T>::AnalysisBinningManager(YAML::Node Config_) {
   }
   std::cout << "\n" << std::endl;
 
+  BuildAnalysisBinningMetadata();
 }
 
+template <typename T>
+void AnalysisBinningManager<T>::BuildAnalysisBinningMetadata() {
+    ParamNames.clear();
+   
+    std::string ParameterName;
+
+    if (Config["parameter"] && Config["parameter"]["name"]) {
+        ParameterName = Config["parameter"]["name"].as<std::string>();
+    }
+
+    const int nBins = GetNBins();
+
+    for (std::size_t iSelec = 0;
+         iSelec < AnalysisSelectionBinning.size();
+         ++iSelec) {
+
+        const auto& selection = AnalysisSelectionBinning[iSelec];
+
+        const std::size_t nVars = selection.BinVars.size();
+
+              std::vector<int> nBinsPerVar(nVars);
+
+        for (std::size_t iVar = 0; iVar < nVars; ++iVar) {
+            const auto& edges = selection.BinEdges[iVar];
+
+            if (edges.size() < 2) {
+                throw std::runtime_error(
+                    "Each analysis-binning variable must have at least two edges."
+                );
+            }
+
+            nBinsPerVar[iVar] = static_cast<int>(edges.size()) - 1;
+        }
+
+        const int nSelectionBins =
+            GetNBinsFromSelection(static_cast<int>(iSelec));
+
+        for (int localBin = 0;
+             localBin < nSelectionBins;
+             ++localBin) {
+
+            std::ostringstream name;
+
+            if (!ParameterName.empty()) {
+                name << ParameterName << "_";
+            }
+
+            name << selection.SelectionName;
+
+            for (std::size_t iVar = 0; iVar < nVars; ++iVar) {
+
+                int stride = 1;
+
+                for (std::size_t jVar = iVar + 1;
+                     jVar < nVars;
+                     ++jVar) {
+                    stride *= nBinsPerVar[jVar];
+                }
+
+                const int binIndex =
+                    (localBin / stride) % nBinsPerVar[iVar];
+
+                const auto& edges = selection.BinEdges[iVar];
+
+                const T lower = edges[binIndex];
+                const T upper = edges[binIndex + 1];
+
+                name << "_" << selection.BinVars[iVar]
+                     << "_" << lower
+                     << "_" << upper;
+            }
+
+            ParamNames.push_back(name.str());
+        }
+    }
+
+    if (static_cast<int>(ParamNames.size()) != nBins) {
+        throw std::runtime_error(
+            "Generated parameter-name count does not match GetNBins()."
+        );
+    }
+
+    AnalysisBinningAxis = TAxis(nBins, 0.0, static_cast<double>(nBins));
+
+    AnalysisBinningAxis.SetName("analysis_binning_axis");
+    AnalysisBinningAxis.SetTitle("Analysis bin");
+
+    for (int iBin = 0; iBin < nBins; ++iBin) {
+        AnalysisBinningAxis.SetBinLabel(
+            iBin + 1,
+            ParamNames[iBin].c_str()
+        );
+    }
+}
 template<typename T>
 bool AnalysisBinningManager<T>::CheckSelectionInAnalysisBinning(int SelectionIndex) {
   for (size_t iSelecBinning=0;iSelecBinning<AnalysisSelectionBinning.size();iSelecBinning++) {

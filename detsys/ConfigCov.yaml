@@ -3,8 +3,8 @@ General:
 
 DrawOptions:
   AnalysisBinning:
-    OutputName: "AnalysisBinningPlots.pdf" #Output of the file which has all the AnalysisBinningPlots
-    OutputRootName: "AnalysisBinning.root" #name of the output file that will contain the covariance and correlation matrices	
+    OutputName: "ModBoxA_covariance.pdf" #Output of the file which has all the AnalysisBinningPlots
+    OutputRootName: "ModBoxA_covariance.root" #name of the output file that will contain the covariance and correlation matrices	
     DrawOpts: "HIST E1" #Used for both full plot and the ratio plot
     NominalSample: "Nominal" #Must match one of the [Samples][Name] nodes defined below
     LegendHeight: 0.1 #Optional - Defines the height of each legend box
@@ -17,25 +17,36 @@ DrawOptions:
       prior: 0.06
     LArReco: "v09_85_00d00"
     LArCafMaker: "v10_09_00d00"
-    CAfToolCommit: 
-      
+    CAfToolCommit: "f39715cedf815bc8ccf4fff4fa7f8018e218797c" 
+    
+#  OneDimension:
+#    OutputName: "1DPlots.pdf" #Output of the file which has all the 1D plots
+#    DrawOpts: "HIST E1" #Used for both full plot and the ratio plot
+#    RatioDenominatorSample: "Nominal" #Must match one of the [Samples][Name] nodes defined below
+#    LegendHeight: 0.12 #Optional - Defines the height of each legend box
+#    LegendFontSize: 0.035 #Optional - Defines the font size used in each legend box
+#    RatioSameCanvas: 1 #ratio plots on same canvas or not?  
  
 Samples:
   - Name: "Nominal" #Sample Identifier name
-    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Nominal_2k/"
+    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/MCSTAT/Nominal_600/"
     SubDirectoryName: "cafmaker" #The CAF files are expected to contain the 'cafTree', 'meta' and 'genieEvt' TTrees. Sometimes, but not all the time, these TTrees are contained in a subdirectory (i.e. 'cafmaker')
     Colour: 1 #Colour from ROOT Colour Wheel
     LineStyle: 1
+    FixCVN: true
+    isRef: true
   - Name: "#splitline{Detector variation}{Mod. Box A = 0.99}"     
-    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Recombination_alpha_high_2k/"
+    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/MCSTAT/NodBoxA0_99_600/"
     SubDirectoryName: "cafmaker"
     Colour: 807
     LineStyle: 1
+    FixCVN: true
   - Name: "#splitline{Detector variation}{Mod. Box A = 0.87}"
-    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/Recombination_alpha_low_2k/" 
+    FilePath: "/exp/dune/data/users/cdalmazz/gitTools/atmospherics-tools/detsys/data/MCSTAT/NodBoxA0_87_600/" 
     SubDirectoryName: "cafmaker"
     Colour: 865
     LineStyle: 1
+    FixCVN: true
 #
 #The next node defines the bins which would be used in some oscillation analysis. By defining the analysis bins, we can calculate the change in normalisation of each analysis bin for a variation of a parameter. This can then be used to calculate a covariance matrix to include bin-to-bin correlations.
 

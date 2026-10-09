@@ -1106,7 +1106,7 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   output_root_file->WriteObject(&LArReco, "LArsoft_reco_tag");
   output_root_file->WriteObject(&LArCafMaker, "LArsoft_cafmaker_tag");
   output_root_file->WriteObject(&CAfToolCommit, "CAFcomparisonTool_commit");
-  output_root_file->WriteObject(&BinLabels, "param_names");
+  //output_root_file->WriteObject(&BinLabels, "param_names");
   output_root_file->WriteObject(&parameterName, "detector_paremeter_name");
   parameterCentralValue.Write("detector_parameter_central_value");
   parameterPrior.Write("detector_parameter_1sigma");
@@ -1114,6 +1114,12 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   LowerBounds.Write("param_lb");
   UpperBounds.Write("param_ub");
   CovMatrix.Write("covariance");
+
+  auto paramNames = AnalysisBinning->GetParamNames();
+  auto binningAxis = AnalysisBinning->GetAnalysisBinningAxis();
+
+  output_root_file->WriteObject(&paramNames, "param_names");
+  output_root_file->WriteObject(&binningAxis, "analysis_binning_axis");
 
   Canv->Print(OutputFileName_1D.c_str());
   Canv->SetGridx();

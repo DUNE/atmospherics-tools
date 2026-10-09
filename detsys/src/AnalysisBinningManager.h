@@ -1,5 +1,9 @@
 #pragma once
 #include "yaml-cpp/yaml.h"
+#include <TAxis.h>
+#include <string>
+#include <vector>
+
 
 template <typename T>
 struct SelectionBinning {
@@ -14,6 +18,11 @@ class AnalysisBinningManager {
  private:
   YAML::Node Config;
   std::vector<SelectionBinning<T>> AnalysisSelectionBinning;
+  TAxis AnalysisBinningAxis;
+  std::vector<std::string> ParamNames;
+
+  void BuildAnalysisBinningMetadata();
+
  public:
   AnalysisBinningManager(std::string FilePath_);
   AnalysisBinningManager(YAML::Node Config_);
@@ -24,6 +33,11 @@ class AnalysisBinningManager {
   bool CheckSelectionInAnalysisBinning(int SelectionIndex);
   std::vector<std::string> GetSelectionBinVars(int Selection);
   int GetBin(int SelectionIndex, std::vector<T> EventDetails);
+
+  const TAxis& GetAnalysisBinningAxis() const {return AnalysisBinningAxis;}
+
+  const std::vector<std::string>& GetParamNames() const {return ParamNames;}
+
 };
 
 template struct SelectionBinning<float>;

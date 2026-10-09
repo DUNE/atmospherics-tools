@@ -38,5 +38,22 @@ target_include_directories(CompareEventByEvent
     $ENV{SRPROXY_INC}
 )
 
-install(TARGETS ComparisonScript CompareEventByEvent RUNTIME DESTINATION bin)
+
+# Convert ROOT covariance and parameter metadata to MaCh3 YAML
+add_executable(root_covariance_to_yaml
+  root_covariance_to_yaml.cxx
+)
+
+target_compile_features(root_covariance_to_yaml PRIVATE cxx_std_17)
+
+target_link_libraries(root_covariance_to_yaml
+  PRIVATE
+    yaml-cpp::yaml-cpp
+    ROOT::Core
+    ROOT::RIO
+    ROOT::Matrix
+)
+
+
+install(TARGETS ComparisonScript CompareEventByEvent root_covariance_to_yaml RUNTIME DESTINATION bin)
 
