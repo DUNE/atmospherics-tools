@@ -335,7 +335,7 @@ void SampleManager<T>::BuildSample(YAML::Node SampleNode, bool isReference)
         std::cout<<"Number of refernece events: "<<ReferenceEvents.size()<<std::endl;
     }
     else {
-        Samples.back()->SetEventFilter(ReferenceEvents);
+        if (foundRef) Samples.back()->SetEventFilter(ReferenceEvents);
     }
 }
 
