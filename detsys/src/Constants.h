@@ -54,6 +54,7 @@ enum KinematicParameters {
   kRun,
   kSubrun,
   kEvent,
+  kMinDistToWall,
   nKinPars
 };
 
@@ -141,6 +142,9 @@ inline int Kinematic_StringToInt(std::string Str) {
   }
   if (Str == "kTrueInt") {
     return kTrueInt;
+  }
+  if (Str == "kMinDistToWall") {
+    return kMinDistToWall;
   }
 
   std::cerr << "Did not find std::string -> int mapping for string:" << Str << std::endl;

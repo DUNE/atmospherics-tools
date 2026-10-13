@@ -60,6 +60,7 @@ struct Data
   T osc_from_mu_w = 0;
   T final_oscillated_w = 0;
   std::vector<std::vector<float>> *weightVec;
+  T min_dist_to_wall = 1e8;
 };
 
 
@@ -115,6 +116,7 @@ static inline Data<double> float2double(const Data<float>& data){
   data_D.genie_weight = data.genie_weight;
   data_D.RecoCZ = data.RecoCZ;
   data_D.TrueCZ = data.TrueCZ;
+  data_D.min_dist_to_wall = data.min_dist_to_wall;
 
   return data_D;
 }

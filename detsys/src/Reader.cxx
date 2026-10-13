@@ -214,6 +214,8 @@ const T Reader<T>::ReturnKinematicParameter(int Par) {
     return _data.subrun;
   case kEvent:
     return _data.event;
+  case kMinDistToWall:
+    return _data.min_dist_to_wall;
   }
 
   std::cerr << "Invalid kinematic parameter requested:" << Par << std::endl;
@@ -301,9 +303,16 @@ void Reader<T>::UpdateData(){
   }
  
 
+  double MinDistToWall = 1e8;
+  auto const& pandora_parts = _sr->common.ixn.pandora[0].part.pandora;
+  size_t nParts = pandora_parts.size();
+  for (size_t iPart = 0; iPart < nParts; ++iPart) {
+      auto const& part = pandora_parts[iPart];
+      if (part.origRecoObjType == caf::RecoObjType::kHitCollection) {continue;}
+      if (part.walldist < MinDistToWall) {MinDistToWall = part.walldist;}
+  }
+  _data.min_dist_to_wall = MinDistToWall;
 
-  // TODO: fix this! Make this a mandatory argument in the yaml file
-  //if(_fname == "./data/Deprecated/Recombination_n1Sig"){ 
   if(_fixCVN){   
       _data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.nc;
   }
@@ -311,13 +320,9 @@ void Reader<T>::UpdateData(){
       _data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.numu;
   }
 
-  //_data.cvn_nc = _sr->common.ixn.pandora[0].nuhyp.cvn.nc;
-  //_data.cvn_numu = _sr->common.ixn.pandora[0].nuhyp.cvn.numu;
   _data.cvn_nue = _sr->common.ixn.pandora[0].nuhyp.cvn.nue;
 
 
-  //std::vector<T> CVNScores = {_sr->common.ixn.pandora[0].nuhyp.cvn.nue, _sr->common.ixn.pandora[0].nuhyp.cvn.numu, _sr->common.ixn.pandora[0].nuhyp.cvn.nc};
-  //_data.Selection = arg_max(CVNScores);
   
 
   _data.Selection = Sel::SelNC;
