@@ -3,6 +3,7 @@
 #include "yaml-cpp/yaml.h"
 #include "TH1.h"
 #include "TH2.h"
+#include "TH3.h"
 
 template <typename T>
 struct Cut {

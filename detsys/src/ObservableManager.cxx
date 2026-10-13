@@ -149,7 +149,44 @@ Observable<T>::Observable(YAML::Node ObservableConfig) {
       HistTemplate->GetYaxis()->CenterLabels(true);
       HistTemplate->GetYaxis()->SetLabelSize(0.05);
     }
-  } else {
+  } else if (nDimensions == 3) {
+    std::string HistName = Name;
+
+    std::string HistTitle = Name+";"+Axes[0].Label;
+    for (size_t iCut=0;iCut<Cuts.size();iCut++) {
+      HistTitle += " ("+std::string(Form("%4.2f",Cuts[iCut].LowerBound))+"<"+Cuts[iCut].Variable+"<"+Form("%4.2f",Cuts[iCut].UpperBound)+")";
+    }
+    HistTitle += ";"+Axes[1].Label+";"+Axes[2].Label+";Number of Events";
+
+
+    int nXBins = Axes[0].Binning.size()-1;
+    int nYBins = Axes[1].Binning.size()-1;
+    int nZBins = Axes[2].Binning.size()-1;
+
+    if (typeid(T) == typeid(float)) {
+      HistTemplate = new TH3F(HistName.c_str(),HistTitle.c_str(),nXBins,Axes[0].Binning.data(),nYBins,Axes[1].Binning.data(),nZBins,Axes[2].Binning.data());
+    } else {
+      HistTemplate = new TH3D(HistName.c_str(),HistTitle.c_str(),nXBins,Axes[0].Binning.data(),nYBins,Axes[1].Binning.data(),nZBins,Axes[2].Binning.data());
+    }
+    for (size_t iBin = 0; iBin < Axes[0].BinLabels.size(); iBin++){
+      HistTemplate->GetXaxis()->SetBinLabel(iBin+1, Axes[0].BinLabels[iBin].c_str());
+    }
+    for (size_t iBin = 0; iBin < Axes[1].BinLabels.size(); iBin++){
+      HistTemplate->GetYaxis()->SetBinLabel(iBin+1, Axes[1].BinLabels[iBin].c_str());
+    }
+    for (size_t iBin = 0; iBin < Axes[2].BinLabels.size(); iBin++){
+      HistTemplate->GetZaxis()->SetBinLabel(iBin+1, Axes[2].BinLabels[iBin].c_str());
+    }
+    if (Axes[0].BinLabels.size() > 0){
+      HistTemplate->GetXaxis()->CenterLabels(true);
+      HistTemplate->GetXaxis()->SetLabelSize(0.05);
+    }
+    if (Axes[1].BinLabels.size() > 0){
+      HistTemplate->GetYaxis()->CenterLabels(true);
+      HistTemplate->GetYaxis()->SetLabelSize(0.05);
+    }
+  }
+else {
     std::cerr << "Currently only have support for 1 and 2 dimension observables" << std::endl;
     throw;
   }

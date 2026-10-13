@@ -104,5 +104,12 @@ int main(int argc, char const *argv[]) {
     std::cout << "Did not find the [DrawOptions][TwoDimension] node in the provided config - not drawing 2D distributions" << std::endl;
   }
 
+  if (Config["DrawOptions"]["ThreeDimension"]) {
+    YAML::Node ThreeDimensionDrawingConfig = Config["DrawOptions"]["ThreeDimension"];
+    Samples.Save3DRatio(ThreeDimensionDrawingConfig);
+  } else {
+    std::cout << "Did not find the [DrawOptions][ThreeDimension] node in the provided config - not saving 3D ratio distributions" << std::endl;
+  }
+
   return 0;
 }

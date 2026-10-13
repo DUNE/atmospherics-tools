@@ -92,8 +92,14 @@ void Sample<T>::ReadData() {
 	T YVar = SampleReader->ReturnKinematicParameter(Measurements[iMeas].AxisVariables[1]);
 	TH2* Hist2D = dynamic_cast<TH2*>(Measurements[iMeas].Histogram);
 	Hist2D->Fill(XVar,YVar,EventWeight);
+      } else if (Measurements[iMeas].nDimensions == 3) {
+        T XVar = SampleReader->ReturnKinematicParameter(Measurements[iMeas].AxisVariables[0]);
+        T YVar = SampleReader->ReturnKinematicParameter(Measurements[iMeas].AxisVariables[1]);
+        T ZVar = SampleReader->ReturnKinematicParameter(Measurements[iMeas].AxisVariables[2]);
+        TH3* Hist3D = dynamic_cast<TH3*>(Measurements[iMeas].Histogram);
+        Hist3D->Fill(XVar,YVar,ZVar,EventWeight);
       } else {
-	std::cerr << "Invalid number of axes! >2" << std::endl;
+	std::cerr << "Invalid number of axes! >3" << std::endl;
 	throw;
       }
     }
@@ -109,7 +115,7 @@ void Sample<T>::ReadData() {
       Measurements[iMeas].Histogram->GetXaxis()->CenterTitle();
     } else if (nAxes == 2) {
       Measurements[iMeas].Histogram->GetZaxis()->SetTitle((std::string(Measurements[iMeas].Histogram->GetZaxis()->GetTitle())+"/Bin Width").c_str());
-    } else {
+    } else if (nAxes > 3){
       std::cerr << "Invalid number of axes! >2" << std::endl;
       throw;
     }
@@ -237,6 +243,8 @@ void Sample<T>::SetObservables(ObservableManager<T>* ObsManager) {
       nBins = (Measurements[iMeas].Histogram)->GetNbinsX();
     } else if (nAxes == 2) {
       nBins = (Measurements[iMeas].Histogram)->GetNbinsX() * (Measurements[iMeas].Histogram)->GetNbinsY();
+    } else if (nAxes == 3) {
+      nBins = (Measurements[iMeas].Histogram)->GetNbinsX() * (Measurements[iMeas].Histogram)->GetNbinsY() * (Measurements[iMeas].Histogram)->GetNbinsZ();
     } else {
       std::cerr << "Invalid number of axes! >2" << std::endl;
       throw;
@@ -1352,4 +1360,45 @@ void SampleManager<T>::Plot2D(YAML::Node Config) {
   }
 
   Canv->Print((OutputFileName_2D+"]").c_str());
+}
+
+template<typename T>
+void SampleManager<T>::Save3DRatio(YAML::Node Config) {
+  OutputRootRatios3D = Config["OutputRootRatios"].as<std::string>();
+  output_root_ratios_3d = TFile::Open(OutputRootRatios3D.c_str(),"RECREATE");
+
+  std::vector<TH1*> Hists(Samples.size());
+
+  for (int iObs=0;iObs<ObsManager->GetNObservables();iObs++) {
+    if (ObsManager->GetObservable(iObs)->GetNDimensions() != 3) continue;
+    for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
+      Hists[iSamp] = Samples[iSamp]->GetMeasurement(iObs);
+      Hists[iSamp]->SetTitle(Samples[iSamp]->GetName().c_str());
+    }
+    if (output_root_ratios_3d){
+      //std::cout<<"filling ratio file for 3D histograms"<<std::endl;
+      TH3* Nominal = dynamic_cast<TH3*>(Samples[IndexToRatioTo]->GetMeasurement(iObs));
+      output_root_ratios_3d->cd();
+      for (size_t iSamp = 0; iSamp < Samples.size(); iSamp++) {
+
+        TH3* Hist = dynamic_cast<TH3*>(Hists[iSamp]);
+        if (Hist){
+        std::cout<<"filling ratio file for 3D histograms"<<std::endl;
+        TH3* Ratio = dynamic_cast<TH3*>(
+            Hist->Clone(
+                (std::string(Hist->GetName())).c_str()
+            )
+        );
+
+        Ratio->SetDirectory(nullptr);
+        Ratio->Divide(Nominal);
+        Ratio->SetName((std::string(Hist->GetName())).c_str());
+
+        output_root_ratios_3d->WriteObject(Ratio, Ratio->GetName());
+
+        delete Ratio;
+      }
+      }
+    }
+  }
 }

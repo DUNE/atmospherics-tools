@@ -80,8 +80,10 @@ class SampleManager {
   OscillatorBase* OscillBase;
   TFile* output_root_ratios = nullptr;
   TFile* output_root_ratios_2d = nullptr;
+  TFile* output_root_ratios_3d = nullptr;
   std::string OutputRootRatios;
   std::string OutputRootRatios2D;
+  std::string OutputRootRatios3D;
   std::string OutputFileName_1D;
   std::string OutputFileName_2D;
   std::string OutputRootName;
@@ -130,6 +132,7 @@ class SampleManager {
   void PlotAnalysisBinning(YAML::Node Config);
   void Plot1D(YAML::Node Config);
   void Plot2D(YAML::Node Config);
+  void Save3DRatio(YAML::Node Config);
   void PlotMatchedDifferences();
   void PlotUnMatched();
   void SetAnalysisBinning(AnalysisBinningManager<T>* AnalysisBinning_) {
