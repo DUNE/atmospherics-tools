@@ -1279,6 +1279,9 @@ void SampleManager<T>::Plot2D(YAML::Node Config) {
 
   OutputFileName_2D = Config["OutputName"].as<std::string>();
   DrawOptions_2D = Config["DrawOpts"].as<std::string>();
+  OutputRootRatios2D = Config["OutputRootRatios"].as<std::string>();
+
+  output_root_ratios_2d = TFile::Open(OutputRootRatios2D.c_str(),"RECREATE");
 
   TCanvas* Canv = new TCanvas;
   Canv->SetTickx();
@@ -1310,6 +1313,30 @@ void SampleManager<T>::Plot2D(YAML::Node Config) {
 
       Hists[iSamp]->Draw(DrawOptions_2D.c_str());
       Canv->Print(OutputFileName_2D.c_str());
+    }
+   
+    if (output_root_ratios_2d){
+      std::cout<<"filling ratio file for 2D histograms"<<std::endl;
+      TH2* Nominal = dynamic_cast<TH2*>(Samples[IndexToRatioTo]->GetMeasurement(iObs));
+      output_root_ratios_2d->cd();
+      for (size_t iSamp = 0; iSamp < Samples.size(); iSamp++) {
+
+        TH2* Hist = dynamic_cast<TH2*>(Hists[iSamp]);
+        TH2* Ratio = dynamic_cast<TH2*>(
+            Hist->Clone(
+                (std::string(Hist->GetName()) + "_RatioToNominal").c_str()
+            )
+        );
+
+        Ratio->SetDirectory(nullptr);
+        Ratio->Divide(Nominal);
+        Ratio->SetName((std::string(Hist->GetName())).c_str());
+
+        output_root_ratios_2d->WriteObject(Ratio, Ratio->GetName());
+
+        delete Ratio;
+
+      }
     }
 
   }

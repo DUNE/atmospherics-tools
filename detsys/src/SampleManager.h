@@ -79,7 +79,9 @@ class SampleManager {
   FluxManager* FlxMgr;
   OscillatorBase* OscillBase;
   TFile* output_root_ratios = nullptr;
+  TFile* output_root_ratios_2d = nullptr;
   std::string OutputRootRatios;
+  std::string OutputRootRatios2D;
   std::string OutputFileName_1D;
   std::string OutputFileName_2D;
   std::string OutputRootName;
