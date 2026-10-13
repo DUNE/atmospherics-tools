@@ -96,7 +96,7 @@ Observable<T>::Observable(YAML::Node ObservableConfig) {
     std::cerr << "Invalid number of axes defined for observable:" << Name << std::endl;
     throw;
   } else if (nDimensions == 1) {
-    std::string HistName = Name+"_0";
+    std::string HistName = Name;
     //std::string HistTitle = Axes[0].Label;
     std::string HistTitle = Name;
     /*for (size_t iCut=0;iCut<Cuts.size();iCut++) {
@@ -118,7 +118,7 @@ Observable<T>::Observable(YAML::Node ObservableConfig) {
       HistTemplate->GetXaxis()->SetLabelSize(0.05);
     }
   } else if (nDimensions == 2) {
-    std::string HistName = Name+"_0";
+    std::string HistName = Name;
 
     std::string HistTitle = Name+";"+Axes[0].Label;
     for (size_t iCut=0;iCut<Cuts.size();iCut++) {

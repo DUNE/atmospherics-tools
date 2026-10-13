@@ -204,7 +204,7 @@ void Sample<T>::SetObservables(ObservableManager<T>* ObsManager) {
     Meas.Histogram = static_cast<TH1*>(Hist->Clone());
     Meas.Histogram->Sumw2();
 
-    std::string HistName = std::string(Meas.Histogram->GetName())+"_"+Name;
+    std::string HistName = Name+"_"+std::string(Meas.Histogram->GetName());
     std::replace(HistName.begin(),HistName.end(),' ','_');
     Meas.Histogram->SetName(HistName.c_str());
 
@@ -485,9 +485,14 @@ void SampleManager<T>::Plot1DRatioHists(TCanvas* Canv, std::vector<TH1*> Hists) 
 
   for (size_t iSamp=0;iSamp<Hists.size();iSamp++) {
     Hists[iSamp]->GetYaxis()->SetTitle(std::string("Ratio to "+SampleNameToRatioTo).c_str());
-    if(output_root_ratios){
+    if(output_root_ratios && iSamp != static_cast<size_t>(IndexToRatioTo)){
       output_root_ratios->cd();
-      Hists[iSamp]->Write();
+      std::string RatioName = Hists[iSamp]->GetName();
+      const std::string suffix = "_ratio";
+      if (RatioName.size() >= suffix.size() && RatioName.compare(RatioName.size() - suffix.size(), suffix.size(), suffix) == 0) {
+        RatioName.erase(RatioName.size() - suffix.size());
+      }
+      Hists[iSamp]->Write(RatioName.c_str());
     }
     if (iSamp==0) {
       Hists[iSamp]->Draw((DrawOptions_1D).c_str());
@@ -677,9 +682,14 @@ void SampleManager<T>::Plot1DWithRatio(TCanvas* Canv, std::vector<TH1*> Hists) {
         RatioHists[iSamp]->SetBinError(xBin,0.0);
       }
     }*/
-    if(output_root_ratios){
+    if(output_root_ratios && iSamp != static_cast<size_t>(IndexToRatioTo)){
       output_root_ratios->cd();
-      RatioHists[iSamp]->Write();
+      std::string RatioName = RatioHists[iSamp]->GetName();
+      const std::string suffix = "_ratio";
+      if (RatioName.size() >= suffix.size() && RatioName.compare(RatioName.size() - suffix.size(), suffix.size(), suffix) == 0) {
+        RatioName.erase(RatioName.size() - suffix.size());
+      }
+      RatioHists[iSamp]->Write(RatioName.c_str());
     }
     if (iSamp==0) {
       RatioHists[iSamp]->Draw(DrawOptions_1D.c_str());
@@ -1320,7 +1330,7 @@ void SampleManager<T>::Plot2D(YAML::Node Config) {
       TH2* Nominal = dynamic_cast<TH2*>(Samples[IndexToRatioTo]->GetMeasurement(iObs));
       output_root_ratios_2d->cd();
       for (size_t iSamp = 0; iSamp < Samples.size(); iSamp++) {
-
+        if (iSamp == static_cast<size_t>(IndexToRatioTo)) continue;
         TH2* Hist = dynamic_cast<TH2*>(Hists[iSamp]);
         TH2* Ratio = dynamic_cast<TH2*>(
             Hist->Clone(
