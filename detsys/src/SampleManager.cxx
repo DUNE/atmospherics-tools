@@ -1380,7 +1380,7 @@ void SampleManager<T>::Save3DRatio(YAML::Node Config) {
       TH3* Nominal = dynamic_cast<TH3*>(Samples[IndexToRatioTo]->GetMeasurement(iObs));
       output_root_ratios_3d->cd();
       for (size_t iSamp = 0; iSamp < Samples.size(); iSamp++) {
-
+        if (iSamp == static_cast<size_t>(IndexToRatioTo)) continue;
         TH3* Hist = dynamic_cast<TH3*>(Hists[iSamp]);
         if (Hist){
         std::cout<<"filling ratio file for 3D histograms"<<std::endl;
