@@ -15,7 +15,85 @@
 
 #include <TString.h>
 
+
+
+struct KinematicCut {
+    std::string Name;
+    double LowerBound;
+    double UpperBound;
+};
+
+
+const std::map<std::string, std::string> KinematicNameMap = {
+    {"kNuERec",     "RecoNeutrinoEnergy"},
+    {"kNuRecoCosZ", "RecoCosineZ"},
+    {"kNuTrueE",    "TrueNeutrinoEnergy"},
+    {"kNuTrueCosZ", "TrueCosineZ"}
+};
+
+bool TryParseDouble(const std::string& text, double& value)
+{
+    char* end = nullptr;
+    value = std::strtod(text.c_str(), &end);
+
+    return end != text.c_str()
+        && *end == '\0'
+        && std::isfinite(value);
+}
+
+std::vector<KinematicCut> ParseKinematicCuts(
+    const std::string& parameterName)
+{
+    std::vector<KinematicCut> cuts;
+    std::vector<std::string> tokens;
+    std::stringstream stream(parameterName);
+    std::string token;
+
+    while (std::getline(stream, token, '_')) {
+        tokens.push_back(token);
+    }
+    for (std::size_t i = 0; i < tokens.size(); ++i) {
+        const auto mapping = KinematicNameMap.find(tokens[i]);
+        if (mapping == KinematicNameMap.end()) {
+            continue;
+        }
+        if (i + 2 >= tokens.size()) {
+            throw std::runtime_error(
+                "Missing kinematic bounds after '" + tokens[i] +
+                "' in parameter: " + parameterName
+            );
+        }
+
+        double lower = 0.0;
+        double upper = 0.0;
+
+        if (!TryParseDouble(tokens[i + 1], lower) ||
+            !TryParseDouble(tokens[i + 2], upper)) {
+            throw std::runtime_error(
+                "Invalid kinematic bounds after '" + tokens[i] +
+                "' in parameter: " + parameterName
+            );
+        }
+
+        if (lower > upper) {
+            throw std::runtime_error(
+                "Lower kinematic bound exceeds upper bound in: " +
+                parameterName
+            );
+        }
+        cuts.push_back({
+            mapping->second,
+            lower,
+            upper
+        });
+        i += 2;
+    }
+
+    return cuts;
+}
+
 struct Config {
+    std::vector<KinematicCut> KinematicCuts;
     std::vector<std::string> SampleNames = {"FD_*", "ATM"};
     std::vector<std::string> DetID;
 
@@ -140,6 +218,21 @@ void ConvertRootToYaml(
         systematic["Error"] = errors[i];
         systematic["FlatPrior"] = config.FlatPrior;
 
+
+        const auto cuts = ParseKinematicCuts(name);
+
+        for (const auto& cut : cuts) {
+            YAML::Node bounds(YAML::NodeType::Sequence);
+            bounds.push_back(cut.LowerBound);
+    	    bounds.push_back(cut.UpperBound);
+
+    	    YAML::Node cutEntry;
+    	    cutEntry[cut.Name] = bounds;
+
+    	    systematic["KinematicCuts"].push_back(cutEntry);
+	}	
+
+
         systematic["ParameterBounds"].push_back((*lowerBounds)[i]);
         systematic["ParameterBounds"].push_back((*upperBounds)[i]);
 
@@ -226,7 +319,7 @@ int main(int argc, char* argv[]) {
         Config config;
         config.SampleNames = {"FD_*", "ATM"};
         config.ParameterGroup = "Detector";
-        config.Type = "Oscillation"; //To change, do not know to what
+        config.Type = "Norm"; //To change, do not know to what
         config.FlatPrior = false;
         config.Generated = 1.0;
         config.PreFitValue = 1.0;
