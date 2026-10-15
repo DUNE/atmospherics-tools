@@ -92,9 +92,35 @@ std::vector<KinematicCut> ParseKinematicCuts(
     return cuts;
 }
 
+std::vector<std::string> GetSampleNames(
+    const std::string& parameterName,
+    const std::vector<std::string>& defaultSamples)
+{
+    std::string lowerName = parameterName;
+
+    std::transform(
+        lowerName.begin(),
+        lowerName.end(),
+        lowerName.begin(),
+        [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        }
+    );
+
+    if (lowerName.find("numu") != std::string::npos) {
+        return {"numuselec"};
+    }
+
+    if (lowerName.find("nue") != std::string::npos) {
+        return {"nueselec"};
+    }
+
+    return defaultSamples;
+}
+
 struct Config {
     std::vector<KinematicCut> KinematicCuts;
-    std::vector<std::string> SampleNames = {"FD_*", "ATM"};
+    std::vector<std::string> SampleNames;
     std::vector<std::string> DetID;
 
     std::string ParameterGroup = "Osc";
@@ -210,7 +236,11 @@ void ConvertRootToYaml(
                 systematic["DetID"].push_back(id);
             }
         } else {
-            for (const auto& sample : config.SampleNames) {
+            const auto sampleNames = GetSampleNames(name, config.SampleNames);
+            
+            systematic["SampleNames"] = YAML::Node(YAML::NodeType::Sequence);
+            systematic["SampleNames"].SetStyle(YAML::EmitterStyle::Flow);
+            for (const auto& sample : sampleNames) {
                 systematic["SampleNames"].push_back(sample);
             }
         }
