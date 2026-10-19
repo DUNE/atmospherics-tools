@@ -92,32 +92,6 @@ std::vector<KinematicCut> ParseKinematicCuts(
     return cuts;
 }
 
-std::vector<std::string> GetSampleNames(
-    const std::string& parameterName,
-    const std::vector<std::string>& defaultSamples)
-{
-    std::string lowerName = parameterName;
-
-    std::transform(
-        lowerName.begin(),
-        lowerName.end(),
-        lowerName.begin(),
-        [](unsigned char c) {
-            return static_cast<char>(std::tolower(c));
-        }
-    );
-
-    if (lowerName.find("numu") != std::string::npos) {
-        return {"numuselec"};
-    }
-
-    if (lowerName.find("nue") != std::string::npos) {
-        return {"nueselec"};
-    }
-
-    return defaultSamples;
-}
-
 struct Config {
     std::vector<KinematicCut> KinematicCuts;
     std::vector<std::string> SampleNames;
@@ -236,11 +210,7 @@ void ConvertRootToYaml(
                 systematic["DetID"].push_back(id);
             }
         } else {
-            const auto sampleNames = GetSampleNames(name, config.SampleNames);
-            
-            systematic["SampleNames"] = YAML::Node(YAML::NodeType::Sequence);
-            systematic["SampleNames"].SetStyle(YAML::EmitterStyle::Flow);
-            for (const auto& sample : sampleNames) {
+            for (const auto& sample : config.SampleNames) {
                 systematic["SampleNames"].push_back(sample);
             }
         }
@@ -347,8 +317,8 @@ int main(int argc, char* argv[]) {
 
     try {
         Config config;
-        config.SampleNames = {"FD_*", "ATM"};
-        config.ParameterGroup = "Detector";
+        config.SampleNames = {"ATM"};
+        config.ParameterGroup = "DetNorm";
         config.Type = "Norm"; //To change, do not know to what
         config.FlatPrior = false;
         config.Generated = 1.0;
