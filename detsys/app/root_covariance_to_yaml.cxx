@@ -4,6 +4,9 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <map>
+#include <sstream>
+#include <cstdlib>
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
@@ -41,10 +44,46 @@ bool TryParseDouble(const std::string& text, double& value)
         && std::isfinite(value);
 }
 
+bool TryParseFlavorCut(
+    const std::string& parameterName,
+    KinematicCut& cut)
+{
+    std::vector<std::string> tokens;
+    std::stringstream stream(parameterName);
+    std::string token;
+
+    while (std::getline(stream, token, '_')) {
+        tokens.push_back(token);
+    }
+
+    for (const auto& part : tokens) {
+        if (part == "NuE") {
+            cut = {"SelFlavour", -0.5, 0.5};
+            return true;
+        }
+
+        if (part == "NuMu") {
+            cut = {"SelFlavour", 0.5, 1.5};
+            return true;
+        }
+        if (part == "NC") {
+            cut = {"SelFlavour", 1.5, 2.5};
+            return true;
+        }
+    }
+
+    return false;
+}
+
 std::vector<KinematicCut> ParseKinematicCuts(
     const std::string& parameterName)
 {
     std::vector<KinematicCut> cuts;
+    KinematicCut flavorCut;
+
+    if (TryParseFlavorCut(parameterName, flavorCut)) {
+        cuts.push_back(flavorCut);
+    }
     std::vector<std::string> tokens;
     std::stringstream stream(parameterName);
     std::string token;
