@@ -401,10 +401,13 @@ void SampleManager<T>::ScaleToNormalisation(std::string SampleNameToNormTo) {
   }
   
   for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
-    T Factor = static_cast<T>(Samples[IndexToNormTo]->GetIntegral())/static_cast<T>(Samples[iSamp]->GetIntegral());
-    //T Factor = static_cast<T>(Samples[IndexToNormTo]->GetNEvents())/static_cast<T>(Samples[iSamp]->GetNEvents());
-    std::cout<<"scaling factor: "<<Factor<<std::endl;
-    Samples[iSamp]->Scale(Factor);
+    T Factor = 1;
+    if (iSamp!=static_cast<size_t>(IndexToNormTo)){
+      Factor = static_cast<T>(Samples[IndexToNormTo]->GetIntegral())/static_cast<T>(Samples[iSamp]->GetIntegral());
+      //T Factor = static_cast<T>(Samples[IndexToNormTo]->GetNEvents())/static_cast<T>(Samples[iSamp]->GetNEvents());
+      std::cout<<"scaling factor: "<<Factor<<std::endl;
+      Samples[iSamp]->Scale(Factor);
+    }
   }
 }
 
@@ -676,9 +679,20 @@ void SampleManager<T>::Plot1DWithRatio(TCanvas* Canv, std::vector<TH1*> Hists) {
 
     RatioHists[iSamp]->GetYaxis()->SetNdivisions(505);
   }
+
+  if (RatioYAxisMax != _BAD_VALUE_) {
+    Max = RatioYAxisMax;
+    Min = RatioYAxisMin;
+  }
+  else{
+    Max = 1.2;
+    Min = 0.8;
+  }
+
+
   for (size_t iSamp=0;iSamp<Hists.size();iSamp++) {
     //RatioHists[iSamp]->GetYaxis()->SetRangeUser(min-0.02,max+0.02);
-    RatioHists[iSamp]->GetYaxis()->SetRangeUser(0.9,1.1);
+    RatioHists[iSamp]->GetYaxis()->SetRangeUser(Min,Max);
     RatioHists[iSamp]->GetYaxis()->SetTitleOffset(0.6);
     /*if (static_cast<int>(iSamp) == IndexToRatioTo) {
 
@@ -939,14 +953,9 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   OutputRootName = Config["OutputRootName"].as<std::string>();
   DrawOptions_1D = Config["DrawOpts"].as<std::string>();
   TString NominalSample(Config["NominalSample"].as<std::string>().c_str());
-  TString LArReco(Config["LArReco"].as<std::string>().c_str());
-  TString LArCafMaker(Config["LArCafMaker"].as<std::string>().c_str());
+  TString duneswTag(Config["duneswTag"].as<std::string>().c_str());
   TString CAfToolCommit(Config["CAfToolCommit"].as<std::string>().c_str()); 
   TString parameterName(Config["parameter"]["name"].as<std::string>().c_str());
-  TVectorT<double> parameterCentralValue(1);
-  parameterCentralValue[0] =  Config["parameter"]["central_value"].as<double>();
-  TVectorT<double> parameterPrior(1); 
-  parameterPrior[0] =  Config["parameter"]["prior"].as<double>();
 
   SampleNameToRatioTo = NominalSample;
   int plotRatiosSameCanvas = 0;
@@ -1121,13 +1130,9 @@ void SampleManager<T>::PlotAnalysisBinning(YAML::Node Config) {
   TFile *output_root_file = new TFile(OutputRootName.c_str(), "RECREATE");
   
 
-  output_root_file->WriteObject(&LArReco, "LArsoft_reco_tag");
-  output_root_file->WriteObject(&LArCafMaker, "LArsoft_cafmaker_tag");
+  output_root_file->WriteObject(&duneswTag, "dunesw_tag");
   output_root_file->WriteObject(&CAfToolCommit, "CAFcomparisonTool_commit");
-  //output_root_file->WriteObject(&BinLabels, "param_names");
   output_root_file->WriteObject(&parameterName, "detector_paremeter_name");
-  parameterCentralValue.Write("detector_parameter_central_value");
-  parameterPrior.Write("detector_parameter_1sigma");
   Priors.Write("param_prior");
   LowerBounds.Write("param_lb");
   UpperBounds.Write("param_ub");
@@ -1301,6 +1306,8 @@ void SampleManager<T>::Plot2D(YAML::Node Config) {
 
   output_root_ratios_2d = TFile::Open(OutputRootRatios2D.c_str(),"RECREATE");
 
+  SampleNameToRatioTo = Config["RatioDenominatorSample"].as<std::string>();
+
   TCanvas* Canv = new TCanvas;
   Canv->SetTickx();
   Canv->SetTicky();
@@ -1334,6 +1341,22 @@ void SampleManager<T>::Plot2D(YAML::Node Config) {
     }
    
     if (output_root_ratios_2d){
+
+      IndexToRatioTo = -1;
+      for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
+        if (Samples[iSamp]->GetName() == SampleNameToRatioTo) {
+          IndexToRatioTo = iSamp;
+          break;
+        }
+      }
+      if (IndexToRatioTo == -1) {
+        std::cerr << "Did not find:" << SampleNameToRatioTo << std::endl;
+        std::cerr << "Available:" << std::endl;
+        for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
+          std::cerr << "\t" << iSamp << " " << Samples[iSamp]->GetName() << std::endl;
+        }
+        return;
+      }
       std::cout<<"filling ratio file for 2D histograms"<<std::endl;
       TH2* Nominal = dynamic_cast<TH2*>(Samples[IndexToRatioTo]->GetMeasurement(iObs));
       output_root_ratios_2d->cd();
@@ -1365,9 +1388,26 @@ void SampleManager<T>::Plot2D(YAML::Node Config) {
 template<typename T>
 void SampleManager<T>::Save3DRatio(YAML::Node Config) {
   OutputRootRatios3D = Config["OutputRootRatios"].as<std::string>();
+  SampleNameToRatioTo = Config["RatioDenominatorSample"].as<std::string>();
+
   output_root_ratios_3d = TFile::Open(OutputRootRatios3D.c_str(),"RECREATE");
 
   std::vector<TH1*> Hists(Samples.size());
+  IndexToRatioTo = -1;
+  for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
+    if (Samples[iSamp]->GetName() == SampleNameToRatioTo) {
+      IndexToRatioTo = iSamp;
+      break;
+    }
+  }
+  if (IndexToRatioTo == -1) {
+    std::cerr << "Did not find:" << SampleNameToRatioTo << std::endl;
+    std::cerr << "Available:" << std::endl;
+    for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
+      std::cerr << "\t" << iSamp << " " << Samples[iSamp]->GetName() << std::endl;
+    }
+    return;
+  }
 
   for (int iObs=0;iObs<ObsManager->GetNObservables();iObs++) {
     if (ObsManager->GetObservable(iObs)->GetNDimensions() != 3) continue;
