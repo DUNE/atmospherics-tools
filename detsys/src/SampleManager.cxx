@@ -1341,7 +1341,6 @@ void SampleManager<T>::Plot2D(YAML::Node Config) {
     }
    
     if (output_root_ratios_2d){
-
       IndexToRatioTo = -1;
       for (size_t iSamp=0;iSamp<Samples.size();iSamp++) {
         if (Samples[iSamp]->GetName() == SampleNameToRatioTo) {
@@ -1361,8 +1360,9 @@ void SampleManager<T>::Plot2D(YAML::Node Config) {
       TH2* Nominal = dynamic_cast<TH2*>(Samples[IndexToRatioTo]->GetMeasurement(iObs));
       output_root_ratios_2d->cd();
       for (size_t iSamp = 0; iSamp < Samples.size(); iSamp++) {
-        if (iSamp == static_cast<size_t>(IndexToRatioTo)) continue;
         TH2* Hist = dynamic_cast<TH2*>(Hists[iSamp]);
+        output_root_ratios_2d->WriteObject(Hists[iSamp], Hist->GetName());
+        if (iSamp == static_cast<size_t>(IndexToRatioTo)) continue;
         TH2* Ratio = dynamic_cast<TH2*>(
             Hist->Clone(
                 (std::string(Hist->GetName()) + "_RatioToNominal").c_str()
@@ -1371,8 +1371,8 @@ void SampleManager<T>::Plot2D(YAML::Node Config) {
 
         Ratio->SetDirectory(nullptr);
         Ratio->Divide(Nominal);
-        Ratio->SetName((std::string(Hist->GetName())).c_str());
-
+        //Ratio->SetName((std::string(Hist->GetName())).c_str());
+         
         output_root_ratios_2d->WriteObject(Ratio, Ratio->GetName());
 
         delete Ratio;
