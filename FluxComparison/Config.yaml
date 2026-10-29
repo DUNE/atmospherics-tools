@@ -1,6 +1,26 @@
 General:
   Verbosity: 0
-  Nominal: "HONDASolMin"
+
+  SingleModelFlavourPlotPrefix: "SingleModelFlavour_"
+  SingleModelFlavourPlotSuffix: ".pdf"
+  SingleModelFlavourPlotDrawOptions: "COLZ"
+
+  InterpSingleModelFlavourPlotOutputName: "InterpolatedSingleModelFlavourPlots.pdf"
+  InterpSingleModelFlavourPlotDrawOptions: "COLZ"
+
+  RatioInterpModelFlavourPlotOutputName: "RatioOfInterpolatedSingleModelFlavourPlots.pdf"
+  RatioInterpModelFlavourPlotDrawOptions: "COLZ"
+
+  InterpSingleModelFlavourCombPlotOutputName: "InterpolatedSingleModelFlavourCombinationPlots.pdf"
+  InterpSingleModelFlavourCombPlotDrawOptions: "COLZ"
+
+  RatioInterpModelFlavourCombPlotOutputName: "RatioOfInterpolatedSingleModelFlavourCombinationPlots.pdf"
+  RatioInterpModelFlavourCombPlotDrawOptions: "COLZ TEXT0"
+
+  SplinePlotOutputName: "SplinePlots.pdf"
+  SplineFileOutputName: "AtmosphericFluxShapeSplines.root"
+
+  NominalModel: "HONDASolMin"
 
   #Calculated from np.logspace(-1,2,62)
 #  ComparisonBinning_Energy: [  0.1       ,   0.11199028,   0.12541823,   0.14045622,

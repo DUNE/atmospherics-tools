@@ -1,48 +1,14 @@
 #pragma once
 #include "yaml-cpp/yaml.h"
 
+#include "Utils.h"
+#include "Constants.h"
+
 #include "TH1.h"
-#include "TH2.h"
-#include "TH3.h"
 
 #include <vector>
-#include <string>
-
-using FLOAT_T = double;
-
-inline std::vector<std::string> SplitLine(const std::string& str) {
-  std::vector<std::string> tokens;
-  std::istringstream iss(str);
-  std::string token;
-  
-  while (iss >> token) {
-    tokens.push_back(token);
-  }
-  
-  return tokens;
-}
-
-enum Flavours{
-  NuE = 0,
-  NuM = 1,
-  ANuE = 2,
-  ANuM = 3,
-  nFlavs = 4
-};
-
-enum FlavRatios{
-  Ratio_Total, // (NuMu+ANuMu)/(NuE+ANuE)
-  Ratio_NuE, // NuE/ANuE
-  Ratio_NuM, // NuMu/ANuMu
-  nFlavRatios
-};
-
-const std::vector< std::string > FlavourNames = {"NuE","NuM","ANuE","ANuM"};
-const std::vector< std::string > RatioFlavourNames = {"(NuM+ANuM)/(NuE+ANuE)","NuM/ANuM","NuE/ANuE"};
-const std::vector< std::string > RatioFlavourShortNames = {"TotalRatio","NuMRatio","NuERatio"};
 
 class FluxReader {
-
 private:
   std::string ModelName;
   std::vector<FLOAT_T> EnergyBinEdges;

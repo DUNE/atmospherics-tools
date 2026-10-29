@@ -23,7 +23,7 @@ endif(ROOT_FOUND)
 # part of ERepSim.
 
 set(source   FluxReader.cxx BartolFluxReader.cxx HondaFluxReader.cxx)
-set(includes FluxReader.h   BartolFluxReader.h   HondaFluxReader.h  )
+set(includes FluxReader.h   BartolFluxReader.h   HondaFluxReader.h   Utils.h Constants.h)
 
 ############################FluxComparison############################
 

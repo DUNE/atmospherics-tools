@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "TH2.h"
+#include "TH3.h"
 #include "TCanvas.h"
 
 FluxReader::FluxReader(YAML::Node Config_) {
