@@ -12,7 +12,7 @@ set(CMAKE_CXX_FLAGS "-Werror -Wall -Wpedantic")
 set(CMAKE_VERBOSE_MAKEFILE TRUE)
 
 find_package(ROOT REQUIRED
-  COMPONENTS Geom Physics Matrix MathCore Tree RIO)
+  COMPONENTS Geom Physics Matrix MathCore Tree RIO Hist)
 if(ROOT_FOUND)
   include(${ROOT_USE_FILE})
 endif(ROOT_FOUND)
@@ -54,6 +54,35 @@ target_link_libraries(root_covariance_to_yaml
     ROOT::Matrix
 )
 
+add_executable(BinMerger
+    BinMerger.cxx
+)
 
-install(TARGETS ComparisonScript CompareEventByEvent root_covariance_to_yaml RUNTIME DESTINATION bin)
+target_compile_features(BinMerger PRIVATE cxx_std_17)
+
+target_link_libraries(BinMerger
+    PRIVATE
+        ROOT::Core
+        ROOT::RIO
+        ROOT::Hist
+        yaml-cpp::yaml-cpp
+)
+
+add_executable(BinErrorThreshold
+    BinErrorThreshold.cxx
+)
+
+target_compile_features(BinErrorThreshold PRIVATE cxx_std_17)
+
+target_link_libraries(BinErrorThreshold
+    PRIVATE
+        ROOT::Core
+        ROOT::RIO
+        ROOT::Hist
+        ROOT::Graf
+        ROOT::Gpad
+        yaml-cpp::yaml-cpp
+)
+
+install(TARGETS ComparisonScript CompareEventByEvent root_covariance_to_yaml BinMerger BinErrorThreshold RUNTIME DESTINATION bin)
 
