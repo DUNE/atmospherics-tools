@@ -186,6 +186,8 @@ const T Reader<T>::ReturnKinematicParameter(int Par) {
     return _data.erec_numu;
   case kNuEERec:
     return _data.erec_nue;
+  case kInelasticity:
+    return _data.inelasticity;
   case kNuERes:
     return (_data.erec - _data.ev)/_data.ev;
   case kNuCosZRes:
@@ -294,6 +296,7 @@ void Reader<T>::UpdateData(){
     _data.had_nue_erec = _BAD_VALUE_;
     _data.e_erec = _BAD_VALUE_;
     _data.erec_nue = _BAD_VALUE_;
+    _data.inelasticity = _BAD_VALUE_;
     _data.RecoCZ = _BAD_VALUE_;
     _data.Selection = Unsel;
     _data.cvn_numu = _BAD_VALUE_;
@@ -360,6 +363,9 @@ void Reader<T>::UpdateData(){
   _data.mu_erec = _data.erec_numu - _data.had_numu_erec;
   _data.e_erec = _data.erec_nue - _data.had_nue_erec;
   _data.calo_erec = _sr->common.ixn.pandora[0].Enu.calo;
+
+
+  if (_data.erec > 0) _data.inelasticity = _data.had_erec / _data.erec;
 
   if (std::isnan(_data.RecoCZ)) {
     return;

@@ -39,6 +39,7 @@ enum KinematicParameters {
   kNuERec,
   kNuEERec,
   kNuMuERec,
+  kInelasticity,
   kNuETrue,
   kNuERes,
   kNuCosZRes,
@@ -146,7 +147,9 @@ inline int Kinematic_StringToInt(std::string Str) {
   if (Str == "kMinDistToWall") {
     return kMinDistToWall;
   }
-
+  if (Str == "kInelasticity") {
+    return kInelasticity;
+  }
   std::cerr << "Did not find std::string -> int mapping for string:" << Str << std::endl;
   std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
   throw;

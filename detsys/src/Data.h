@@ -19,6 +19,7 @@ struct Data
   T erec;
   T erec_nue;
   T erec_numu;
+  T inelasticity;
   int mode;
   T NuMomX;
   T NuMomY;
@@ -80,6 +81,7 @@ static inline Data<double> float2double(const Data<float>& data){
   data_D.erec = data.erec;
   data_D.erec_nue = data.erec_nue;
   data_D.erec_numu = data.erec_numu;
+  data_D.inelasticity = data.inelasticity;
   data_D.mode = data.mode;
   data_D.NuMomX = data.NuMomX;
   data_D.NuMomY = data.NuMomY;
