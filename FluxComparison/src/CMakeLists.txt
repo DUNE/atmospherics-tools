@@ -1,5 +1,3 @@
-message("TPCSim Library")
-
 # if(NOT CMAKE_BUILD_TYPE)
 #   set(CMAKE_BUILD_TYPE Release)
 # endif()
@@ -29,7 +27,7 @@ set(includes FluxReader.h   BartolFluxReader.h   HondaFluxReader.h   Utils.h Con
 
 add_library(FluxComparison SHARED ${source} ${includes})
 
-target_link_libraries(FluxComparison yaml-cpp)
+target_link_libraries(FluxComparison PUBLIC yaml-cpp)
 
 target_include_directories(FluxComparison PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
