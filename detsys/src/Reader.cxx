@@ -336,26 +336,32 @@ void Reader<T>::UpdateData(){
     _data.Selection = Sel::SelNuE;
   }
 
+  caf::SRVector3D* d = nullptr;
+
   if (_data.Selection == Sel::SelNC) {
     _data.had_erec = _sr->common.ixn.pandora[0].Enu.calo;
     _data.erec = _sr->common.ixn.pandora[0].Enu.calo;
     _data.lep_erec = 0;
-    _data.RecoCZ = -_sr->common.ixn.pandora[0].dir.heshw.y;
+    d = &_sr->common.ixn.pandora[0].dir.heshw;
+    //_data.RecoCZ = -_sr->common.ixn.pandora[0].dir.heshw.y;
   } else if (_data.Selection == Sel::SelNuMu) {
     _data.erec = _sr->common.ixn.pandora[0].Enu.lep_calo;
     _data.had_erec = _sr->common.ixn.pandora[0].Enu.mu_had;
     _data.lep_erec = _data.erec - _data.had_erec;
-    _data.RecoCZ = -_sr->common.ixn.pandora[0].dir.lngtrk.y;
+    d = &_sr->common.ixn.pandora[0].dir.lngtrk;
+    //_data.RecoCZ = -_sr->common.ixn.pandora[0].dir.lngtrk.y;
   } else if (_data.Selection == Sel::SelNuE) {
     _data.erec = _sr->common.ixn.pandora[0].Enu.e_calo;
     _data.had_erec = _sr->common.ixn.pandora[0].Enu.e_had;
     _data.lep_erec = _data.erec - _data.had_erec;
-    _data.RecoCZ = -_sr->common.ixn.pandora[0].dir.heshw.y;
+    d = &_sr->common.ixn.pandora[0].dir.heshw;
+    //_data.RecoCZ = -_sr->common.ixn.pandora[0].dir.heshw.y;
   } else {
     std::cerr << "Invalid selection" << std::endl;
     throw;
   }
 
+  _data.RecoCZ = -d->y/std::sqrt(d->x*d->x + d->y*d->y + d->z*d->z);
   _data.had_numu_erec =  _sr->common.ixn.pandora[0].Enu.mu_had;
   _data.had_nue_erec =  _sr->common.ixn.pandora[0].Enu.e_had;
   _data.erec_numu =  _sr->common.ixn.pandora[0].Enu.lep_calo;
