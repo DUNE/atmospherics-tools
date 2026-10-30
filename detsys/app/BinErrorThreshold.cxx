@@ -89,10 +89,12 @@ int processHistogram(TH2D* hist, double threshold)
             const double content = hist->GetBinContent(x, y);
             const double error = hist->GetBinError(x, y);
 
-            if (error > threshold &&
-                error > std::abs(content - 1.0)) {
-                hist->SetBinContent(x, y, 1.0);
-                ++modifiedBins;
+            if (error > threshold){
+                if (error > 0.5 || error > std::abs(content - 1.0)) {
+                    hist->SetBinContent(x, y, 1.0);
+                    ++modifiedBins;
+                    if (error > 0.5) std::cout<< "WARNING LARGE ERROR FOR BIN x=" << x << ", y= " << y << std::endl;
+                }
             }
         }
     }
