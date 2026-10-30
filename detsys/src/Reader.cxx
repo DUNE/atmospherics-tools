@@ -233,7 +233,7 @@ template<typename T>
 void Reader<T>::UpdateData(){
   
   T ENu = _sr->mc.nu[0].E;
-  T CosTh = _sr->mc.nu[0].momentum.y / sqrt(pow(_sr->mc.nu[0].momentum.x,2) + pow(_sr->mc.nu[0].momentum.y,2) + pow(_sr->mc.nu[0].momentum.z,2));
+  T CosTh = - _sr->mc.nu[0].momentum.y / sqrt(pow(_sr->mc.nu[0].momentum.x,2) + pow(_sr->mc.nu[0].momentum.y,2) + pow(_sr->mc.nu[0].momentum.z,2));
   T Phi = 60.; //Same as here: https://github.com/DUNE/atmospherics-tools/blob/41b9bb7afe248f9923aab6c3cc52900e76d2d3c1/weight_calculation/src/Calculator.cxx#L38
   
   Flavour nuE = (_sr->mc.nu[0].pdg > 0) ? Flavour::NuE : Flavour::NuEBar;
