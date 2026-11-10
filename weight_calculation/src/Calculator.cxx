@@ -34,16 +34,21 @@ void Calculator<T>::Process(){
         bar.update();
         Data<double> data = FetchData();
         double Enu = data.ev;
-        double costh = data.NuMomY/sqrt(pow(data.NuMomX, 2) + pow(data.NuMomY, 2) + pow(data.NuMomZ, 2));
+        // Cosine of the zenith angle of the neutrino arrival direction (+1 = downgoing, -1 = upgoing).
+        // The detector y axis points up and the momentum points away from the source, hence the minus sign.
+        // This is the convention of the GENIE atmospheric flux drivers (p = -E*(sin(th)cos(phi), sin(th)sin(phi), cos(th))
+        // in the topocentric frame), so it must be used for the flux lookups (in particular the reference flux that
+        // enters the generation weight) as well as for the oscillation baseline.
+        double cosz = -data.NuMomY/sqrt(pow(data.NuMomX, 2) + pow(data.NuMomY, 2) + pow(data.NuMomZ, 2));
         double phi = 60; //To be modified in the case of 3D flux.
 
         Flavour nuE = (data.nuPDG > 0) ? Flavour::NuE : Flavour::NuEBar;
         Flavour nuMu = (data.nuPDG > 0) ? Flavour::NuMu : Flavour::NuMuBar;
 
-        double nuE_flux = _mgr.GetFlux(nuE, Enu, costh, phi);
-        double nuMu_flux = _mgr.GetFlux(nuMu, Enu, costh, phi);
+        double nuE_flux = _mgr.GetFlux(nuE, Enu, cosz, phi);
+        double nuMu_flux = _mgr.GetFlux(nuMu, Enu, cosz, phi);
 
-        double ref_flux = _mgr.GetFlux(Flavour::Reference, Enu, costh, phi);
+        double ref_flux = _mgr.GetFlux(Flavour::Reference, Enu, cosz, phi);
         
         double xsec_w = data.weight/ref_flux/POT*_exposure_scaling;
         double nuE_w = nuE_flux;
@@ -54,7 +59,7 @@ void Calculator<T>::Process(){
         double final_oscillated_w = 0;
 
         if(_osc_calculator && _earth){
-            std::tie(osc_from_e_w, osc_from_mu_w) = GetOscWeight(Enu, -costh, (Flavour)data.nuPDG);
+            std::tie(osc_from_e_w, osc_from_mu_w) = GetOscWeight(Enu, cosz, (Flavour)data.nuPDG);
             final_oscillated_w = xsec_w*(osc_from_e_w*nuE_w + osc_from_mu_w*nuMu_w);
         }
 
