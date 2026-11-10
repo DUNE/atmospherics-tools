@@ -72,6 +72,11 @@ int main(int argc, char const *argv[])
         .scan<'g', float>()
         .help("List of 6 oscillation parameters to use under the form: th12 th23 th13 dcp dms12 dms23 (rad, eV^2)\nDefault values are taken from NuFIT 5.2 w. SK atm.: 0.583 0.737 0.150 4.05 7.41e-5 2.51e-3");
 
+    parser.add_argument("--flat")
+        .default_value(false)
+        .implicit_value(true)
+        .help("The input is a flat ntuple produced from LArSoft files with larsoft/extract_larsoft.C (events/meta trees) instead of a CAF. The CVN based sample_id is then not computed.");
+
     parser.add_argument("--save-caf")
         .default_value(false)
         .implicit_value(true)
@@ -120,10 +125,14 @@ int main(int argc, char const *argv[])
     std::string earth_model = parser.get<std::string>("earthmodel");
     std::vector<float> pmns_params = parser.get<std::vector<float>>("--pmns");
 
-    FluxManager manager(fluxes);
-    Reader<float> reader(ifilename, "cafmaker");
+    bool flat_input = parser.get<bool>("--flat");
 
-    DirWriter writer(ofilename);
+    FluxManager manager(fluxes);
+    Reader<float> reader(ifilename,
+                         flat_input ? "" : "cafmaker",
+                         flat_input ? InputFormat::Flat : InputFormat::CAF);
+
+    DirWriter writer(ofilename, !flat_input);
 
     Calculator<float> calc(manager, reader, writer, exposure_scaling);
 
@@ -140,9 +149,11 @@ int main(int argc, char const *argv[])
 
     if(parser.get<bool>("--save-caf")){
         writer.GetFile()->cd();
-        writer.AddTree(reader.GetTree()->CloneTree(-1, "fast"));
-        writer.AddTree(reader.GetGenieTree()->CloneTree(-1, "fast"));
-        writer.AddTree(reader.GetGlobalTree()->CloneTree(-1, "fast"));
+        for(TTree *tree : {reader.GetTree(), reader.GetGenieTree(), reader.GetGlobalTree()}){
+            if(tree){ // no genieEvt tree for flat inputs
+                writer.AddTree(tree->CloneTree(-1, "fast"));
+            }
+        }
     }
 
     writer.Write();

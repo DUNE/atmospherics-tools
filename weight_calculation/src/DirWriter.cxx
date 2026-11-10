@@ -2,7 +2,8 @@
 #include <iostream>
 #include "DirWriter.h"
 
-DirWriter::DirWriter(std::string name)
+DirWriter::DirWriter(std::string name, bool write_sample_id)
+: _write_sample_id(write_sample_id)
 {
     this->Create(name);
     this->SetupTree();
@@ -45,5 +46,7 @@ void DirWriter::SetupTree(){
     _tree->Branch("osc_from_mu_w",&_data.osc_from_mu_w);
     _tree->Branch("final_oscillated_w",&_data.final_oscillated_w);
     _tree->Branch("genie_weight",&_data.genie_weight);
-    _tree->Branch("sample_id",&_data.sample_id);
+    if(_write_sample_id){ // CVN based, meaningless without reconstruction info
+        _tree->Branch("sample_id",&_data.sample_id);
+    }
 }

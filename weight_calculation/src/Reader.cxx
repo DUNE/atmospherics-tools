@@ -1,7 +1,8 @@
 #include "Reader.h"
 
 template<typename T>
-Reader<T>::Reader(std::string fname, std::string subfolder)
+Reader<T>::Reader(std::string fname, std::string subfolder, InputFormat format)
+: _format(format)
 {
    this->Open(fname, subfolder);
    _data = Data<T>();
@@ -42,7 +43,7 @@ void Reader<T>::Open(std::string fname, std::string subfolder)
         abort();
     }
 
-    std::string tree_name = "cafTree";
+    std::string tree_name = (_format == InputFormat::Flat) ? "events" : "cafTree";
     std::string globtree_name = "meta";
     std::string genietree_name = "genieEvt";
 
@@ -70,9 +71,11 @@ void Reader<T>::Open(std::string fname, std::string subfolder)
     }
     _global_tree = global_tree;
 
-    TTree *genie_tree;
-    _file->GetObject(genietree_name.c_str(), genie_tree);
-    if(genie_tree == nullptr){
+    TTree *genie_tree = nullptr;
+    if(_format == InputFormat::CAF){
+        _file->GetObject(genietree_name.c_str(), genie_tree);
+    }
+    if(genie_tree == nullptr && _format == InputFormat::CAF){
         std::cout << "WARNING: No tree named " << genietree_name << " in the input file " << fname << std::endl;
     }
     _genie_tree = genie_tree;
@@ -85,6 +88,18 @@ TFile* Reader<T>::GetFile(){
 
 template<typename T>
 void Reader<T>::SetupTree(){
+    if(_format == InputFormat::Flat){
+        _tree->SetBranchAddress("run", &_flat.run);
+        _tree->SetBranchAddress("subrun", &_flat.subrun);
+        _tree->SetBranchAddress("eid", &_flat.eid);
+        _tree->SetBranchAddress("nuPDG", &_flat.nuPDG);
+        _tree->SetBranchAddress("Ev", &_flat.Ev);
+        _tree->SetBranchAddress("NuMomX", &_flat.NuMomX);
+        _tree->SetBranchAddress("NuMomY", &_flat.NuMomY);
+        _tree->SetBranchAddress("NuMomZ", &_flat.NuMomZ);
+        _tree->SetBranchAddress("genie_weight", &_flat.genie_weight);
+        return;
+    }
     _sr = new caf::StandardRecordProxy(_tree, "rec");
     // TString start_str = "";
     // _tree->SetBranchAddress(start_str + "Ev", &_data.ev);
@@ -163,6 +178,22 @@ const Data<T>& Reader<T>::GetData(){
 
 template<typename T>
 void Reader<T>::UpdateData(){
+    if(_format == InputFormat::Flat){
+        _data.ev = _flat.Ev;
+        _data.NuMomX = _flat.NuMomX;
+        _data.NuMomY = _flat.NuMomY;
+        _data.NuMomZ = _flat.NuMomZ;
+        _data.nuPDG = _flat.nuPDG;
+        _data.weight = _flat.genie_weight;
+        _data.run = _flat.run;
+        _data.subrun = _flat.subrun;
+        _data.eid = _flat.eid;
+        // No reconstruction (CVN) information in the flat input
+        _data.cvn_score_numu = 0;
+        _data.cvn_score_nue = 0;
+        _data.cvn_score_nc = 0;
+        return;
+    }
     _data.ev = _sr->mc.nu[0].E;
     _data.NuMomX = _sr->mc.nu[0].momentum.x;
     _data.NuMomY = _sr->mc.nu[0].momentum.y;
